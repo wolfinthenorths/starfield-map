@@ -1,3 +1,4 @@
+
 const bounds = [[0, 0], [MAP_HEIGHT, MAP_WIDTH]];
 
 function toLL(point) {
@@ -8,32 +9,8 @@ function toLLs(points) {
   return points.map(toLL);
 }
 
-function chaikinClosed(points, iterations = 2) {
-  // Safer smoothing than Catmull-Rom: it rounds corners without overshooting outside the original border.
-  if (!points || points.length < 4) return points || [];
-
-  let current = points.map(p => [p[0], p[1]]);
-
-  for (let k = 0; k < iterations; k++) {
-    const next = [];
-    for (let i = 0; i < current.length; i++) {
-      const p = current[i];
-      const q = current[(i + 1) % current.length];
-
-      next.push([
-        0.75 * p[0] + 0.25 * q[0],
-        0.75 * p[1] + 0.25 * q[1]
-      ]);
-
-      next.push([
-        0.25 * p[0] + 0.75 * q[0],
-        0.25 * p[1] + 0.75 * q[1]
-      ]);
-    }
-    current = next;
-  }
-
-  return current;
+function ringsToLLs(parts) {
+  return parts.map(toLLs);
 }
 
 const map = L.map("map", {
@@ -43,6 +20,19 @@ const map = L.map("map", {
   zoomControl: true,
   attributionControl: false
 });
+
+map.createPane("anomalyPane");
+map.getPane("anomalyPane").style.zIndex = 310;
+map.createPane("cityFillPane");
+map.getPane("cityFillPane").style.zIndex = 320;
+map.createPane("districtPane");
+map.getPane("districtPane").style.zIndex = 330;
+map.createPane("cityHitPane");
+map.getPane("cityHitPane").style.zIndex = 340;
+map.createPane("vaultPane");
+map.getPane("vaultPane").style.zIndex = 500;
+map.createPane("labelPane");
+map.getPane("labelPane").style.zIndex = 650;
 
 L.imageOverlay(MAP_IMAGE, bounds).addTo(map);
 map.fitBounds(bounds);
@@ -55,9 +45,9 @@ const districtLayer = L.layerGroup().addTo(map);
 const labelLayer = L.layerGroup().addTo(map);
 
 L.control.layers(null, {
-  "Кликабельные города": hitCityLayer,
-  "Кликабельные бункеры": hitVaultLayer,
-  "Аномалии и опасные зоны": anomalyLayer,
+  "Города": hitCityLayer,
+  "Бункеры": hitVaultLayer,
+  "Аномалии": anomalyLayer,
   "Районы выбранного города": districtLayer
 }, { collapsed: false }).addTo(map);
 
@@ -139,14 +129,18 @@ function clearDistricts() {
 function showCity(city) {
   clearDistricts();
 
-  L.polygon(toLLs(chaikinClosed(city.hit, 1)), {
-    className: "city-outline"
+  L.polygon(toLLs(city.hit), {
+    pane: "cityFillPane",
+    className: "city-area",
+    interactive: false
   }).addTo(selectedCityLayer);
 
   const cityDistricts = districts.filter(d => d.city === city.id);
 
   cityDistricts.forEach(d => {
-    const poly = L.polygon(toLLs(chaikinClosed(d.pts, 2)), {
+    const latlngs = d.parts ? ringsToLLs(d.parts) : toLLs(d.pts);
+    const poly = L.polygon(latlngs, {
+      pane: "districtPane",
       className: `district-shape ${d.kind || ""}`,
       bubblingMouseEvents: false
     }).addTo(districtLayer);
@@ -157,6 +151,7 @@ function showCity(city) {
     });
 
     L.marker(toLL(d.label), {
+      pane: "labelPane",
       icon: districtLabel(d.name),
       interactive: false
     }).addTo(labelLayer);
@@ -181,6 +176,7 @@ document.getElementById("clear-districts").addEventListener("click", () => {
 
 cities.forEach(city => {
   const zone = L.polygon(toLLs(city.hit), {
+    pane: "cityHitPane",
     className: "hit-zone",
     fill: true,
     color: "#5c2639",
@@ -194,8 +190,23 @@ cities.forEach(city => {
   });
 });
 
+anomalies.forEach(anomaly => {
+  const poly = L.polygon(toLLs(anomaly.pts), {
+    pane: "anomalyPane",
+    className: "anomaly-shape",
+    bubblingMouseEvents: false
+  }).addTo(anomalyLayer);
+
+  poly.on("click", (event) => {
+    L.DomEvent.stopPropagation(event);
+    clearDistricts();
+    openPanel(anomaly, "anomaly");
+  });
+});
+
 vaults.forEach(vault => {
   const zone = L.circle(toLL(vault.center), {
+    pane: "vaultPane",
     radius: vault.radius,
     className: "hit-zone",
     color: "#233b47",
@@ -208,18 +219,5 @@ vaults.forEach(vault => {
     L.DomEvent.stopPropagation(event);
     clearDistricts();
     openPanel(vault, "vault");
-  });
-});
-
-anomalies.forEach(anomaly => {
-  const poly = L.polygon(toLLs(chaikinClosed(anomaly.pts, 2)), {
-    className: "anomaly-shape",
-    bubblingMouseEvents: false
-  }).addTo(anomalyLayer);
-
-  poly.on("click", (event) => {
-    L.DomEvent.stopPropagation(event);
-    clearDistricts();
-    openPanel(anomaly, "anomaly");
   });
 });

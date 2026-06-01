@@ -236,3 +236,41 @@ html, body {
 .info-panel .card-section p {
   text-align: left;
 }
+
+
+.city-area {
+  stroke: #6e3550;
+  stroke-width: 2.2;
+  stroke-opacity: .55;
+  fill: #87506b;
+  fill-opacity: .10;
+}
+
+.district-shape {
+  stroke-width: 1.6;
+  stroke-opacity: .70;
+  fill-opacity: .24;
+}
+
+.anomaly-shape {
+  stroke: #5c2639;
+  stroke-width: 2.4;
+  stroke-opacity: .66;
+  stroke-dasharray: 10 7;
+  fill: #7b3350;
+  fill-opacity: .05;
+  cursor: pointer;
+}
+
+.leaflet-overlay-pane svg path {
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.card-section p + p {
+  margin-top: 10px;
+}
+
+.info-panel .card-section p {
+  text-align: left;
+}
