@@ -13,18 +13,20 @@
   <aside id="info-panel" class="info-panel">
     <button id="close-panel" class="close-panel" aria-label="Закрыть карточку">×</button>
     <div id="panel-content">
-      <p class="panel-empty">Нажмите на название города, городскую область или номер бункера на карте.</p>
+      <p class="panel-empty">Нажмите на уже нарисованное название города или на номер бункера. Новые подписи и номера поверх карты не добавляются.</p>
     </div>
   </aside>
 
   <div class="map-title">
     SOUTHERN WASTELAND
-    <span>interactive archive map · v4</span>
+    <span>interactive archive map</span>
   </div>
 
   <div class="map-hint">
-    Нажмите на город — появится его внутренняя схема районов. Нажмите на номер бункера — откроется карточка.
+    Кликайте по названиям городов и номерам бункеров, уже нанесенным на карту.
   </div>
+
+  <button id="clear-districts" class="clear-districts">Скрыть районы</button>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="data.js"></script>

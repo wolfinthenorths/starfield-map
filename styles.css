@@ -19,7 +19,7 @@ html, body {
   top: 14px;
   padding: 10px 14px;
   color: #6e253d;
-  background: rgba(232, 220, 193, 0.78);
+  background: rgba(232, 220, 193, 0.76);
   border: 1px solid rgba(101, 58, 62, 0.28);
   letter-spacing: 0.12em;
   font-weight: bold;
@@ -32,7 +32,7 @@ html, body {
   display: block;
   margin-top: 3px;
   font-size: 10px;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.22em;
   font-weight: normal;
   color: #6a5a48;
 }
@@ -43,87 +43,26 @@ html, body {
   left: 52px;
   bottom: 18px;
   max-width: 360px;
-  padding: 9px 12px;
-  color: #5b4938;
-  background: rgba(232, 220, 193, 0.78);
-  border: 1px solid rgba(101, 58, 62, 0.24);
-  font-size: 13px;
+  padding: 8px 11px;
+  color: #5c2639;
+  background: rgba(232, 220, 193, 0.76);
+  border: 1px solid rgba(101, 58, 62, 0.22);
+  font-size: 12px;
   line-height: 1.35;
   pointer-events: none;
 }
 
-.city-zone {
-  stroke: #6e253d;
-  stroke-width: 2;
-  stroke-opacity: .78;
-  stroke-dasharray: 7 5;
-  fill: #6e253d;
-  fill-opacity: .035;
+.clear-districts {
+  position: absolute;
+  z-index: 900;
+  left: 52px;
+  bottom: 70px;
+  padding: 8px 12px;
+  border: 1px solid rgba(92, 38, 57, 0.38);
+  background: rgba(232, 220, 193, 0.86);
+  color: #5c2639;
+  font-family: Georgia, "Times New Roman", serif;
   cursor: pointer;
-}
-
-.city-zone:hover {
-  stroke-opacity: 1;
-  fill-opacity: .10;
-}
-
-.city-zone.active {
-  stroke-width: 3;
-  stroke-opacity: 1;
-  fill-opacity: .07;
-}
-
-.district-shape {
-  stroke: rgba(50, 32, 27, .72);
-  stroke-width: 2;
-  stroke-opacity: .82;
-  fill-opacity: .46;
-  cursor: pointer;
-}
-
-.district-shape:hover {
-  fill-opacity: .60;
-  stroke-opacity: 1;
-}
-
-.district-residential { fill: #b99a56; }
-.district-trade { fill: #9b5a2e; }
-.district-tech { fill: #4f6f78; }
-.district-cult { fill: #6e3b5e; }
-.district-danger { fill: #7c342d; }
-.district-admin { fill: #65744f; }
-.district-defense { fill: #6f5f48; }
-.district-logistics { fill: #8b6b3d; }
-
-.district-label {
-  box-sizing: border-box;
-  max-width: 170px;
-  padding: 4px 8px;
-  border: 1px solid rgba(92, 38, 57, .36);
-  border-radius: 8px;
-  background: rgba(244, 232, 200, .88);
-  color: #4a282e;
-  font-size: 14px;
-  line-height: 1.1;
-  font-weight: bold;
-  text-align: center;
-  box-shadow: 0 2px 8px rgba(0,0,0,.15);
-  white-space: normal;
-  pointer-events: none;
-}
-
-.vault-hit {
-  stroke: transparent;
-  fill: transparent;
-  cursor: pointer;
-}
-
-.vault-hit:hover {
-  stroke: #4f6f78;
-  stroke-width: 3;
-  stroke-opacity: .85;
-  fill: #4f6f78;
-  fill-opacity: .10;
 }
 
 .info-panel {
@@ -136,7 +75,7 @@ html, body {
   box-sizing: border-box;
   padding: 26px 24px;
   background:
-    linear-gradient(rgba(244, 232, 200, 0.96), rgba(224, 204, 164, 0.96)),
+    linear-gradient(rgba(244, 232, 200, 0.95), rgba(224, 204, 164, 0.95)),
     repeating-linear-gradient(0deg, rgba(90,60,40,.05), rgba(90,60,40,.05) 1px, transparent 1px, transparent 4px);
   color: #3b2726;
   border-left: 2px solid rgba(92, 38, 57, 0.42);
@@ -216,8 +155,56 @@ html, body {
   line-height: 1.45;
 }
 
+.hit-zone {
+  stroke-opacity: 0.001;
+  fill-opacity: 0.001;
+  cursor: pointer;
+}
+
+.city-outline {
+  stroke: #5c2639;
+  stroke-width: 2.5;
+  stroke-opacity: .72;
+  stroke-dasharray: 7 6;
+  fill: #6e253d;
+  fill-opacity: .035;
+  pointer-events: none;
+}
+
+.district-shape {
+  stroke: rgba(62, 38, 36, 0.72);
+  stroke-width: 1.8;
+  stroke-opacity: .85;
+  fill-opacity: .34;
+  cursor: pointer;
+}
+
+.district-shape.trade { fill: #9f612f; }
+.district-shape.tech { fill: #586e75; }
+.district-shape.cult { fill: #6e253d; }
+.district-shape.living { fill: #b89555; }
+.district-shape.control { fill: #6f814d; }
+.district-shape.danger { fill: #8a3b2f; }
+.district-shape.defense { fill: #735a45; }
+
+.district-label {
+  display: inline-block;
+  max-width: 190px;
+  padding: 5px 9px;
+  border-radius: 6px;
+  background: rgba(246, 235, 205, 0.92);
+  border: 1px solid rgba(92, 38, 57, 0.25);
+  color: #4a2a34;
+  font-size: 15px;
+  font-weight: bold;
+  line-height: 1.08;
+  text-align: center;
+  box-shadow: 0 2px 7px rgba(0,0,0,.18);
+  pointer-events: none;
+}
+
 .leaflet-control-layers {
-  background: rgba(232, 220, 193, 0.9);
+  background: rgba(232, 220, 193, 0.88);
   color: #3b2726;
   border: 1px solid rgba(92, 38, 57, 0.28);
 }

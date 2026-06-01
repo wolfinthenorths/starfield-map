@@ -1,5 +1,15 @@
 const bounds = [[0, 0], [MAP_HEIGHT, MAP_WIDTH]];
 
+function toLL(point) {
+  // point = [x, y] in normal image pixels, top-left origin.
+  // Leaflet CRS.Simple uses y in the opposite direction for this bounds setup.
+  return [MAP_HEIGHT - point[1], point[0]];
+}
+
+function toLLs(points) {
+  return points.map(toLL);
+}
+
 const map = L.map("map", {
   crs: L.CRS.Simple,
   minZoom: -2,
@@ -11,40 +21,21 @@ const map = L.map("map", {
 L.imageOverlay(MAP_IMAGE, bounds).addTo(map);
 map.fitBounds(bounds);
 
-const cityLayer = L.layerGroup().addTo(map);
+const hitCityLayer = L.layerGroup().addTo(map);
+const hitVaultLayer = L.layerGroup().addTo(map);
+const selectedCityLayer = L.layerGroup().addTo(map);
 const districtLayer = L.layerGroup().addTo(map);
-const vaultLayer = L.layerGroup().addTo(map);
+const labelLayer = L.layerGroup().addTo(map);
 
 L.control.layers(null, {
-  "Контуры городов": cityLayer,
-  "Районы выбранного города": districtLayer,
-  "Кликабельные бункеры": vaultLayer
+  "Кликабельные города": hitCityLayer,
+  "Кликабельные бункеры": hitVaultLayer,
+  "Районы выбранного города": districtLayer
 }, { collapsed: false }).addTo(map);
-
-let activeCityPolygon = null;
 
 function makeList(items) {
   if (!items || !items.length) return "<p>Нет данных.</p>";
   return `<ul>${items.map(x => `<li>${x}</li>`).join("")}</ul>`;
-}
-
-function centroid(points) {
-  let y = 0;
-  let x = 0;
-  points.forEach(p => {
-    y += p[0];
-    x += p[1];
-  });
-  return [y / points.length, x / points.length];
-}
-
-function labelIcon(text) {
-  return L.divIcon({
-    html: `<div class="district-label">${text}</div>`,
-    className: "",
-    iconSize: [170, 46],
-    iconAnchor: [85, 23]
-  });
 }
 
 function openPanel(item, kind) {
@@ -55,107 +46,117 @@ function openPanel(item, kind) {
     content.innerHTML = `
       <p class="card-kicker">Бункер / опасная точка</p>
       <h2 class="card-title">${item.name}</h2>
-      <p class="card-subtitle">${item.subtitle || ""}</p>
-
-      <div class="card-section">
-        <h3>Год прекращения функционирования</h3>
-        <p>${item.status || "не указан"}</p>
-      </div>
-
-      <div class="card-section">
-        <h3>Ресурсы</h3>
-        ${makeList(item.resources)}
-      </div>
-
-      <div class="card-section">
-        <h3>Warning</h3>
-        <p>${item.warning || "Нет данных."}</p>
-      </div>
+      <p class="card-subtitle">${item.subtitle}</p>
+      <div class="card-section"><h3>Год прекращения функционирования</h3><p>${item.status}</p></div>
+      <div class="card-section"><h3>Ресурсы</h3>${makeList(item.resources)}</div>
+      <div class="card-section"><h3>Warning</h3><p>${item.warning}</p></div>
     `;
   } else if (kind === "district") {
     content.innerHTML = `
-      <p class="card-kicker">Район / внутренняя зона города</p>
+      <p class="card-kicker">Район выбранного города</p>
       <h2 class="card-title">${item.name}</h2>
-      <p class="card-subtitle">${item.subtitle || ""}</p>
-
-      <div class="card-section">
-        <h3>Описание</h3>
-        <p>${item.text || ""}</p>
-      </div>
+      <p class="card-subtitle">${item.subtitle}</p>
+      <div class="card-section"><h3>Описание</h3><p>${item.text}</p></div>
     `;
   } else {
     content.innerHTML = `
-      <p class="card-kicker">Город / область</p>
+      <p class="card-kicker">Город / ${item.region}</p>
       <h2 class="card-title">${item.name}</h2>
-      <p class="card-subtitle">${item.region || ""} · ${item.subtitle || ""}</p>
-
-      <div class="card-section">
-        <h3>Районы</h3>
-        ${makeList((item.districts || []).map(d => d.name))}
-      </div>
-
-      <div class="card-section">
-        <h3>Подсказка</h3>
-        <p>На карте сейчас раскрыты только районы этого города. Нажмите на любой район, чтобы открыть его карточку.</p>
-      </div>
+      <p class="card-subtitle">${item.subtitle}</p>
+      <div class="card-section"><h3>Описание</h3><p>${item.text}</p></div>
+      <div class="card-section"><h3>Районы</h3><p>На карте показаны только районы этого города. Чтобы убрать их, нажмите «Скрыть районы».</p></div>
     `;
   }
 
   panel.classList.add("open");
 }
 
-function selectCity(city, polygon) {
+function districtLabel(text) {
+  return L.divIcon({
+    html: `<div class="district-label">${text}</div>`,
+    className: "",
+    iconSize: [190, 40],
+    iconAnchor: [95, 20]
+  });
+}
+
+function clearDistricts() {
+  selectedCityLayer.clearLayers();
   districtLayer.clearLayers();
+  labelLayer.clearLayers();
+}
 
-  if (activeCityPolygon) {
-    activeCityPolygon.getElement()?.classList.remove("active");
-  }
+function showCity(city) {
+  clearDistricts();
 
-  activeCityPolygon = polygon;
-  setTimeout(() => {
-    polygon.getElement()?.classList.add("active");
-  }, 0);
+  const outline = L.polygon(toLLs(city.hit), {
+    className: "city-outline"
+  }).addTo(selectedCityLayer);
 
-  (city.districts || []).forEach(district => {
-    const poly = L.polygon(district.shape, {
-      className: `district-shape district-${district.type || "admin"}`
+  const cityDistricts = districts.filter(d => d.city === city.id);
+
+  cityDistricts.forEach(d => {
+    const poly = L.polygon(toLLs(d.pts), {
+      className: `district-shape ${d.kind || ""}`,
+      bubblingMouseEvents: false
+    }).addTo(districtLayer);
+
+    poly.on("click", (event) => {
+      L.DomEvent.stopPropagation(event);
+      openPanel(d, "district");
     });
 
-    poly.on("click", () => openPanel(district, "district"));
-    poly.addTo(districtLayer);
-
-    const c = centroid(district.shape);
-    L.marker(c, {
-      icon: labelIcon(district.name),
+    L.marker(toLL(d.label), {
+      icon: districtLabel(d.name),
       interactive: false
-    }).addTo(districtLayer);
+    }).addTo(labelLayer);
+  });
+
+  const viewBounds = L.latLngBounds([toLL(city.view[0]), toLL(city.view[1])]);
+  map.fitBounds(viewBounds.pad(0.18), {
+    animate: true,
+    maxZoom: 1
   });
 
   openPanel(city, "city");
-  map.flyToBounds(L.polygon(city.shape).getBounds(), {
-    padding: [90, 90],
-    maxZoom: 1.15,
-    duration: 0.45
-  });
 }
 
 document.getElementById("close-panel").addEventListener("click", () => {
   document.getElementById("info-panel").classList.remove("open");
 });
 
-cityShapes.forEach(city => {
-  const polygon = L.polygon(city.shape, {
-    className: "city-zone"
-  }).addTo(cityLayer);
+document.getElementById("clear-districts").addEventListener("click", () => {
+  clearDistricts();
+});
 
-  polygon.on("click", () => selectCity(city, polygon));
+cities.forEach(city => {
+  const zone = L.polygon(toLLs(city.hit), {
+    className: "hit-zone",
+    fill: true,
+    color: "#5c2639",
+    fillColor: "#5c2639",
+    bubblingMouseEvents: false
+  }).addTo(hitCityLayer);
+
+  zone.on("click", (event) => {
+    L.DomEvent.stopPropagation(event);
+    showCity(city);
+  });
 });
 
 vaults.forEach(vault => {
-  const hit = L.circle(vault.coords, {
-    radius: 38,
-    className: "vault-hit"
-  }).addTo(vaultLayer);
+  const zone = L.circle(toLL(vault.center), {
+    radius: vault.radius,
+    className: "hit-zone",
+    color: "#233b47",
+    fillColor: "#233b47",
+    fill: true,
+    bubblingMouseEvents: false
+  }).addTo(hitVaultLayer);
 
-  hit.on("click", () => openPanel(vault, "vault"));
+  zone.on("click", (event) => {
+    L.DomEvent.stopPropagation(event);
+    clearDistricts();
+    openPanel(vault, "vault");
+  });
 });
