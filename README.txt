@@ -1,1 +1,1 @@
-v13: stronger district borders, clickable district polygons, city reposition updates, restored district descriptions.
+v14: hotfix for blank map. Fixed app.js syntax so the base map loads again. Geometry and descriptions are from v13.
