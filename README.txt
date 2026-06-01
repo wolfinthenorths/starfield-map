@@ -1,1 +1,1 @@
-v19: includes v17/v18 geometry and styling, plus city-focus zoom mode. Overview stays cleaner; city click zooms in and shows only that city's districts. Button returns to overview.
+v20: based on v17-v19. Reworked New Abilene boundary/click zone, Hardstone boundary and district placement, Port Saint-Marie district placement, and Lafayette Marshes territory.

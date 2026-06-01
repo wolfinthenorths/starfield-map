@@ -456,7 +456,7 @@ html, body {
   box-shadow: 0 2px 9px rgba(0,0,0,.12) !important;
 }
 
-.version-badge::after { content: " v19"; }
+.version-badge::after { content: " v20"; }
 
 
 /* v19 overview/zoom mode */
