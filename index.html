@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Southern Wasteland Map</title>
+
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="map"></div>
+
+  <aside id="info-panel" class="info-panel">
+    <button id="close-panel" class="close-panel">×</button>
+    <div id="panel-content">
+      <p class="panel-empty">Нажмите на город, бункер, маршрут или важное место на карте.</p>
+    </div>
+  </aside>
+
+  <div class="map-title">
+    SOUTHERN WASTELAND
+    <span>interactive archive map</span>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
