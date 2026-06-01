@@ -1,1 +1,1 @@
-v14: hotfix for blank map. Fixed app.js syntax so the base map loads again. Geometry and descriptions are from v13.
+v15: cache-busting hotfix. index.html now loads styles.css?v=15, data.js?v=15, app.js?v=15 and map image ?v=15. A v15 badge appears bottom-right when the new version is actually loaded.

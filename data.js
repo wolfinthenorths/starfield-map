@@ -1,5 +1,5 @@
 // Southern Wasteland Map — v13
-const MAP_IMAGE = "assets/wasteland-map.png";
+const MAP_IMAGE = "assets/wasteland-map.png?v=15";
 const MAP_WIDTH = 2047;
 const MAP_HEIGHT = 1349;
 

@@ -300,3 +300,17 @@ html, body {
 .map-hint { max-width: 390px; }
 .card-section p + p { margin-top:10px; }
 .info-panel .card-section p { text-align:left; }
+
+.version-badge {
+  position: absolute;
+  z-index: 1200;
+  right: 14px;
+  bottom: 14px;
+  padding: 6px 9px;
+  background: rgba(232, 220, 193, 0.85);
+  color: #5c2639;
+  border: 1px solid rgba(92, 38, 57, 0.35);
+  font-size: 12px;
+  font-family: Georgia, "Times New Roman", serif;
+  pointer-events: none;
+}
