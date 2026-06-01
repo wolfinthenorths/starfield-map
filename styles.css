@@ -167,15 +167,15 @@ html, body {
   stroke-opacity: .72;
   stroke-dasharray: 7 6;
   fill: #6e253d;
-  fill-opacity: .035;
+  fill-opacity: .075;
   pointer-events: none;
 }
 
 .district-shape {
   stroke: rgba(62, 38, 36, 0.72);
-  stroke-width: 1.8;
+  stroke-width: 1.55;
   stroke-opacity: .85;
-  fill-opacity: .34;
+  fill-opacity: .28;
   cursor: pointer;
 }
 
@@ -211,4 +211,28 @@ html, body {
 
 .leaflet-control-zoom a {
   color: #3b2726;
+}
+
+
+.anomaly-shape {
+  stroke: #5c2639;
+  stroke-width: 2.1;
+  stroke-opacity: .58;
+  stroke-dasharray: 9 7;
+  fill: #7b3350;
+  fill-opacity: .065;
+  cursor: pointer;
+}
+
+.leaflet-overlay-pane svg path {
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.card-section p + p {
+  margin-top: 10px;
+}
+
+.info-panel .card-section p {
+  text-align: left;
 }

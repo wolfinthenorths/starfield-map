@@ -1,13 +1,39 @@
 const bounds = [[0, 0], [MAP_HEIGHT, MAP_WIDTH]];
 
 function toLL(point) {
-  // point = [x, y] in normal image pixels, top-left origin.
-  // Leaflet CRS.Simple uses y in the opposite direction for this bounds setup.
   return [MAP_HEIGHT - point[1], point[0]];
 }
 
 function toLLs(points) {
   return points.map(toLL);
+}
+
+function chaikinClosed(points, iterations = 2) {
+  // Safer smoothing than Catmull-Rom: it rounds corners without overshooting outside the original border.
+  if (!points || points.length < 4) return points || [];
+
+  let current = points.map(p => [p[0], p[1]]);
+
+  for (let k = 0; k < iterations; k++) {
+    const next = [];
+    for (let i = 0; i < current.length; i++) {
+      const p = current[i];
+      const q = current[(i + 1) % current.length];
+
+      next.push([
+        0.75 * p[0] + 0.25 * q[0],
+        0.75 * p[1] + 0.25 * q[1]
+      ]);
+
+      next.push([
+        0.25 * p[0] + 0.75 * q[0],
+        0.25 * p[1] + 0.75 * q[1]
+      ]);
+    }
+    current = next;
+  }
+
+  return current;
 }
 
 const map = L.map("map", {
@@ -23,6 +49,7 @@ map.fitBounds(bounds);
 
 const hitCityLayer = L.layerGroup().addTo(map);
 const hitVaultLayer = L.layerGroup().addTo(map);
+const anomalyLayer = L.layerGroup().addTo(map);
 const selectedCityLayer = L.layerGroup().addTo(map);
 const districtLayer = L.layerGroup().addTo(map);
 const labelLayer = L.layerGroup().addTo(map);
@@ -30,12 +57,27 @@ const labelLayer = L.layerGroup().addTo(map);
 L.control.layers(null, {
   "Кликабельные города": hitCityLayer,
   "Кликабельные бункеры": hitVaultLayer,
+  "Аномалии и опасные зоны": anomalyLayer,
   "Районы выбранного города": districtLayer
 }, { collapsed: false }).addTo(map);
 
 function makeList(items) {
   if (!items || !items.length) return "<p>Нет данных.</p>";
   return `<ul>${items.map(x => `<li>${x}</li>`).join("")}</ul>`;
+}
+
+function cardText(text) {
+  return String(text || "").split(/\n+/).map(p => `<p>${p}</p>`).join("");
+}
+
+function makeNotes(notes) {
+  if (!notes || !notes.length) return "";
+  return notes.map(note => `
+    <div class="card-section">
+      <h3>${note.title}</h3>
+      ${cardText(note.text)}
+    </div>
+  `).join("");
 }
 
 function openPanel(item, kind) {
@@ -56,14 +98,22 @@ function openPanel(item, kind) {
       <p class="card-kicker">Район выбранного города</p>
       <h2 class="card-title">${item.name}</h2>
       <p class="card-subtitle">${item.subtitle}</p>
-      <div class="card-section"><h3>Описание</h3><p>${item.text}</p></div>
+      <div class="card-section"><h3>Описание</h3>${cardText(item.text)}</div>
+    `;
+  } else if (kind === "anomaly") {
+    content.innerHTML = `
+      <p class="card-kicker">Аномалия / опасная зона</p>
+      <h2 class="card-title">${item.name}</h2>
+      <p class="card-subtitle">${item.subtitle}</p>
+      <div class="card-section"><h3>Описание</h3>${cardText(item.text)}</div>
     `;
   } else {
     content.innerHTML = `
       <p class="card-kicker">Город / ${item.region}</p>
-      <h2 class="card-title">${item.name}</h2>
+      <h2 class="card-title">${item.displayName || item.name}</h2>
       <p class="card-subtitle">${item.subtitle}</p>
-      <div class="card-section"><h3>Описание</h3><p>${item.text}</p></div>
+      <div class="card-section"><h3>Описание</h3>${cardText(item.text)}</div>
+      ${makeNotes(item.notes)}
       <div class="card-section"><h3>Районы</h3><p>На карте показаны только районы этого города. Чтобы убрать их, нажмите «Скрыть районы».</p></div>
     `;
   }
@@ -75,8 +125,8 @@ function districtLabel(text) {
   return L.divIcon({
     html: `<div class="district-label">${text}</div>`,
     className: "",
-    iconSize: [190, 40],
-    iconAnchor: [95, 20]
+    iconSize: [205, 48],
+    iconAnchor: [102, 24]
   });
 }
 
@@ -89,14 +139,14 @@ function clearDistricts() {
 function showCity(city) {
   clearDistricts();
 
-  const outline = L.polygon(toLLs(city.hit), {
+  L.polygon(toLLs(chaikinClosed(city.hit, 1)), {
     className: "city-outline"
   }).addTo(selectedCityLayer);
 
   const cityDistricts = districts.filter(d => d.city === city.id);
 
   cityDistricts.forEach(d => {
-    const poly = L.polygon(toLLs(d.pts), {
+    const poly = L.polygon(toLLs(chaikinClosed(d.pts, 2)), {
       className: `district-shape ${d.kind || ""}`,
       bubblingMouseEvents: false
     }).addTo(districtLayer);
@@ -115,7 +165,7 @@ function showCity(city) {
   const viewBounds = L.latLngBounds([toLL(city.view[0]), toLL(city.view[1])]);
   map.fitBounds(viewBounds.pad(0.18), {
     animate: true,
-    maxZoom: 1
+    maxZoom: 2
   });
 
   openPanel(city, "city");
@@ -158,5 +208,18 @@ vaults.forEach(vault => {
     L.DomEvent.stopPropagation(event);
     clearDistricts();
     openPanel(vault, "vault");
+  });
+});
+
+anomalies.forEach(anomaly => {
+  const poly = L.polygon(toLLs(chaikinClosed(anomaly.pts, 2)), {
+    className: "anomaly-shape",
+    bubblingMouseEvents: false
+  }).addTo(anomalyLayer);
+
+  poly.on("click", (event) => {
+    L.DomEvent.stopPropagation(event);
+    clearDistricts();
+    openPanel(anomaly, "anomaly");
   });
 });
