@@ -1,1 +1,1 @@
-v12: restored city, district and anomaly descriptions from the uploaded lore file.
+v13: stronger district borders, clickable district polygons, city reposition updates, restored district descriptions.

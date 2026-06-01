@@ -280,3 +280,23 @@ html, body {
 .anomaly-shape { stroke: #5c2639 !important; stroke-width: 3.0 !important; stroke-opacity: 0.92 !important; stroke-dasharray: none !important; fill: rgba(123, 51, 80, 0.10) !important; fill-opacity: 0.10 !important; cursor: pointer; }
 .leaflet-overlay-pane svg path { stroke-linejoin: round; stroke-linecap: round; }
 .district-label { border: 1px solid rgba(92,38,57,0.45); background: rgba(246,235,205,0.95); }
+
+
+.hit-zone { stroke-opacity: 0.001; fill-opacity: 0.001; cursor: pointer; }
+.city-area { stroke: #6b324e !important; stroke-width: 2.6 !important; stroke-opacity: 0.92 !important; fill: #8c5d73 !important; fill-opacity: 0.12 !important; }
+.district-shape { stroke: rgba(58, 37, 38, 1) !important; stroke-width: 2.25 !important; stroke-opacity: 1 !important; fill-opacity: 0.26 !important; cursor: pointer; }
+.district-shape.trade { fill: #9f612f !important; }
+.district-shape.tech { fill: #586e75 !important; }
+.district-shape.cult { fill: #6e253d !important; }
+.district-shape.living { fill: #b89555 !important; }
+.district-shape.control { fill: #6f814d !important; }
+.district-shape.danger { fill: #8a3b2f !important; }
+.district-shape.defense { fill: #735a45 !important; }
+.district-shape.eye-zone { stroke-dasharray: 10 7 !important; fill-opacity: 0.08 !important; }
+.district-shape.shift-zone { stroke-dasharray: 4 5 !important; }
+.anomaly-shape { stroke: #5c2639 !important; stroke-width: 3.1 !important; stroke-opacity: 0.95 !important; stroke-dasharray: none !important; fill: #7b3350 !important; fill-opacity: 0.08 !important; cursor: pointer; }
+.leaflet-overlay-pane svg path { stroke-linejoin: round; stroke-linecap: round; }
+.district-label { display:inline-block; max-width:190px; padding:4px 8px; border-radius:6px; background:rgba(246,235,205,0.96); border:1px solid rgba(92,38,57,0.45); color:#4a2a34; font-size:14px; font-weight:bold; line-height:1.08; box-shadow:0 3px 10px rgba(0,0,0,.10); }
+.map-hint { max-width: 390px; }
+.card-section p + p { margin-top:10px; }
+.info-panel .card-section p { text-align:left; }
