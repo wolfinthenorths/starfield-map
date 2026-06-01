@@ -274,3 +274,9 @@ html, body {
 .info-panel .card-section p {
   text-align: left;
 }
+
+.city-area { stroke: #6d3350 !important; stroke-width: 2.8 !important; stroke-opacity: 0.9 !important; fill: #8d5b70 !important; fill-opacity: 0.16 !important; }
+.district-shape { stroke: rgba(70, 40, 42, 0.92) !important; stroke-width: 1.9 !important; stroke-opacity: 1 !important; fill-opacity: 0.34 !important; }
+.anomaly-shape { stroke: #5c2639 !important; stroke-width: 3.0 !important; stroke-opacity: 0.92 !important; stroke-dasharray: none !important; fill: rgba(123, 51, 80, 0.10) !important; fill-opacity: 0.10 !important; cursor: pointer; }
+.leaflet-overlay-pane svg path { stroke-linejoin: round; stroke-linecap: round; }
+.district-label { border: 1px solid rgba(92,38,57,0.45); background: rgba(246,235,205,0.95); }
