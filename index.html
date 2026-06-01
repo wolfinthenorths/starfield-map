@@ -3,19 +3,29 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Southern Wasteland Map — city check</title>
+  <title>Southern Wasteland Map</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <div id="map"></div>
+
   <aside id="info-panel" class="info-panel">
-    <button id="close-panel" class="close-panel">×</button>
+    <button id="close-panel" class="close-panel" aria-label="Закрыть карточку">×</button>
     <div id="panel-content">
-      <p class="panel-empty">Калибровочная версия: проверь, попадают ли светлые круги на города, а кликабельные зоны бункеров — на номера.</p>
+      <p class="panel-empty">Нажмите на название города, городскую область или номер бункера на карте.</p>
     </div>
   </aside>
-  <div class="map-title">CITY CHECK<span>калибровка городов и бункеров</span></div>
+
+  <div class="map-title">
+    SOUTHERN WASTELAND
+    <span>interactive archive map · v4</span>
+  </div>
+
+  <div class="map-hint">
+    Нажмите на город — появится его внутренняя схема районов. Нажмите на номер бункера — откроется карточка.
+  </div>
+
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="data.js"></script>
   <script src="app.js"></script>
