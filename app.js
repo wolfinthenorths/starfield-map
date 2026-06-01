@@ -1,1 +1,89 @@
-const bounds=[[0,0],[MAP_HEIGHT,MAP_WIDTH]];const map=L.map("map",{crs:L.CRS.Simple,minZoom:-2,maxZoom:3,zoomControl:true,attributionControl:false});L.imageOverlay(MAP_IMAGE,bounds).addTo(map);map.fitBounds(bounds);const layers={"Города":L.layerGroup().addTo(map),"Бункеры":L.layerGroup().addTo(map),"Районы":L.layerGroup(),"Важные места":L.layerGroup(),"Маршруты":L.layerGroup().addTo(map)};L.control.layers(null,layers,{collapsed:false}).addTo(map);const districtPolygons=[],districtLabels=[],placeMarkers=[];function htmlIcon(label,className=""){return L.divIcon({html:`<div class="map-icon ${className}"><span>${label||""}</span></div>`,className:"",iconSize:[30,30],iconAnchor:[15,15]})}function labelIcon(text){return L.divIcon({html:`<div class="district-label">${text}</div>`,className:"",iconSize:[120,20],iconAnchor:[60,10]})}function makeList(items){if(!items||!items.length)return"<p>Нет данных.</p>";return`<ul>${items.map(x=>`<li>${x}</li>`).join("")}</ul>`}function openPanel(item){const panel=document.getElementById("info-panel"),content=document.getElementById("panel-content");let body="";if(item.type==="vault"){body=`<p class="card-kicker">Бункер / опасная точка</p><h2 class="card-title">${item.name}</h2><p class="card-subtitle">${item.subtitle||""}</p><div class="card-section"><h3>Статус</h3><p>${item.status||"не уточнён"}</p></div><div class="card-section"><h3>Ресурсы</h3>${makeList(item.resources)}</div><div class="card-section"><h3>Warning</h3><p>${item.warning||"Нет данных."}</p></div>`}else if(item.type==="route"){body=`<p class="card-kicker">Маршрут</p><h2 class="card-title">${item.name}</h2><p class="card-subtitle">${item.subtitle||""}</p><div class="card-section"><h3>Описание</h3><p>${item.text||""}</p></div>`}else if(item.type==="district"){body=`<p class="card-kicker">Район / зона города</p><h2 class="card-title">${item.name}</h2><p class="card-subtitle">${item.city||""}</p><div class="card-section"><h3>${item.subtitle||"Описание"}</h3><p>${item.text||""}</p></div>`}else{body=`<p class="card-kicker">${item.layer||"Важное место"}</p><h2 class="card-title">${item.name}</h2><p class="card-subtitle">${item.subtitle||""}</p><div class="card-section"><h3>Описание</h3><p>${item.text||""}</p></div>`}content.innerHTML=body;panel.classList.add("open")}document.getElementById("close-panel").addEventListener("click",()=>document.getElementById("info-panel").classList.remove("open"));cities.forEach(item=>{L.marker(item.coords,{icon:htmlIcon("","city")}).addTo(layers["Города"]).on("click",()=>openPanel(item))});vaults.forEach(item=>{L.marker(item.coords,{icon:htmlIcon(item.number,"vault")}).addTo(layers["Бункеры"]).on("click",()=>openPanel(item))});districts.forEach(item=>{const polygon=L.polygon(item.points,{className:"district-shape"}).on("click",()=>openPanel(item));const label=L.marker(item.coords,{icon:labelIcon(item.name),interactive:false});districtPolygons.push(polygon);districtLabels.push(label)});places.forEach(item=>{const marker=L.marker(item.coords,{icon:htmlIcon("",`place ${item.category||""}`)}).on("click",()=>openPanel(item));placeMarkers.push(marker)});routes.forEach(item=>{const line=L.polyline(item.points,{color:item.color,weight:3,opacity:.74,className:"route-line"}).addTo(layers["Маршруты"]);line.on("click",()=>openPanel(item))});function syncZoomLayers(){const zoom=map.getZoom(),showDistricts=zoom>=0,showPlaces=zoom>=1;districtPolygons.forEach(p=>{if(showDistricts&&!layers["Районы"].hasLayer(p))layers["Районы"].addLayer(p);if(!showDistricts&&layers["Районы"].hasLayer(p))layers["Районы"].removeLayer(p)});districtLabels.forEach(l=>{if(showDistricts&&!layers["Районы"].hasLayer(l))layers["Районы"].addLayer(l);if(!showDistricts&&layers["Районы"].hasLayer(l))layers["Районы"].removeLayer(l)});placeMarkers.forEach(m=>{if(showPlaces&&!layers["Важные места"].hasLayer(m))layers["Важные места"].addLayer(m);if(!showPlaces&&layers["Важные места"].hasLayer(m))layers["Важные места"].removeLayer(m)})}map.on("zoomend",syncZoomLayers);syncZoomLayers();
+const bounds = [[0, 0], [MAP_HEIGHT, MAP_WIDTH]];
+
+const map = L.map("map", {
+  crs: L.CRS.Simple,
+  minZoom: -2,
+  maxZoom: 3,
+  zoomControl: true,
+  attributionControl: false
+});
+
+L.imageOverlay(MAP_IMAGE, bounds).addTo(map);
+map.fitBounds(bounds);
+
+const cityLayer = L.layerGroup().addTo(map);
+const vaultLayer = L.layerGroup().addTo(map);
+L.control.layers(null, {
+  "Проверка городов": cityLayer,
+  "Проверка бункеров": vaultLayer
+}, { collapsed: false }).addTo(map);
+
+function makeList(items) {
+  if (!items || !items.length) return "<p>Нет данных.</p>";
+  return `<ul>${items.map(x => `<li>${x}</li>`).join("")}</ul>`;
+}
+
+function openPanel(item, kind) {
+  const panel = document.getElementById("info-panel");
+  const content = document.getElementById("panel-content");
+
+  if (kind === "vault") {
+    content.innerHTML = `
+      <p class="card-kicker">Бункер / проверка зоны</p>
+      <h2 class="card-title">${item.name}</h2>
+      <p class="card-subtitle">${item.subtitle}</p>
+      <div class="card-section"><h3>Год прекращения функционирования</h3><p>${item.status}</p></div>
+      <div class="card-section"><h3>Ресурсы</h3>${makeList(item.resources)}</div>
+      <div class="card-section"><h3>Warning</h3><p>${item.warning}</p></div>
+    `;
+  } else {
+    content.innerHTML = `
+      <p class="card-kicker">Город / проверка зоны</p>
+      <h2 class="card-title">${item.name}</h2>
+      <p class="card-subtitle">${item.region} · ${item.subtitle}</p>
+      <div class="card-section"><h3>Проверка</h3><p>${item.text}</p></div>
+      <div class="card-section"><h3>Что проверить глазами</h3><p>Светлый круг должен закрывать городскую подпись и точку города, но не должен слишком сильно залезать на соседний город или бункер.</p></div>
+    `;
+  }
+
+  panel.classList.add("open");
+}
+
+document.getElementById("close-panel").addEventListener("click", () => {
+  document.getElementById("info-panel").classList.remove("open");
+});
+
+function makeTextLabel(text, className, size = [160, 24]) {
+  return L.divIcon({
+    html: `<div class="${className}">${text}</div>`,
+    className: "",
+    iconSize: size,
+    iconAnchor: [size[0] / 2, size[1] / 2]
+  });
+}
+
+cities.forEach(city => {
+  const circle = L.circle(city.coords, {
+    radius: city.radius,
+    className: "city-zone"
+  }).addTo(cityLayer);
+  circle.on("click", () => openPanel(city, "city"));
+
+  L.marker([city.coords[0] - city.radius - 18, city.coords[1]], {
+    icon: makeTextLabel(city.name, "city-label", [210, 24]),
+    interactive: false
+  }).addTo(cityLayer);
+});
+
+vaults.forEach(vault => {
+  const circle = L.circle(vault.coords, {
+    radius: vault.radius,
+    className: "vault-zone"
+  }).addTo(vaultLayer);
+  circle.on("click", () => openPanel(vault, "vault"));
+
+  L.marker([vault.coords[0] - vault.radius - 10, vault.coords[1]], {
+    icon: makeTextLabel(vault.number, "vault-label", [60, 20]),
+    interactive: false
+  }).addTo(vaultLayer);
+});
