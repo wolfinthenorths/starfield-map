@@ -1,35 +1,35 @@
 <!doctype html>
 <html lang="ru">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Southern Wasteland Map</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="styles.css?v=20" />
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><meta name="theme-color" content="#060d09">
+<meta name="description" content="Интерактивная карта убежища Starfield — Dawn of the Dead."><title>STARFIELD · Interactive map</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="styles.css">
+<script src="data.js" defer></script><script src="engine.js" defer></script><script src="app.js" defer></script>
 </head>
 <body>
-  <div id="map"></div>
-
-  <aside id="info-panel" class="info-panel">
-    <button id="close-panel" class="close-panel" aria-label="Закрыть карточку">×</button>
-    <div id="panel-content">
-      <p class="panel-empty">Нажмите на уже нарисованное название города или на номер бункера. Новые подписи и номера поверх карты не добавляются.</p>
-    </div>
-  </aside>
-
-  <div class="map-title">
-    SOUTHERN WASTELAND
-    <span>interactive archive map</span>
-  </div>
-
-  <div class="map-hint">
-    Кликайте по городам, номерам бункеров и аномалиям. При клике на город карта приближается и показывает только его районы.</div>
-
-  <button id="clear-districts" class="clear-districts">Назад к общей карте</button>
-  <div id="version-badge" class="version-badge">v20</div>
-
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="data.js?v=20"></script>
-  <script src="app.js?v=20"></script>
-</body>
-</html>
+<main id="app">
+<section id="welcome" class="screen welcome" aria-label="Добро пожаловать">
+ <div class="boot-mark">VAULT-TEC INDUSTRIES <span>STARFIELD</span></div>
+ <div class="welcome-center"><h1>Enjoy our interactive map!</h1><img src="assets/welcome.gif" width="257" height="257" alt="Vault Boy приглашает в убежище"><button id="begin" class="primary" disabled>Загрузка карты…</button><p id="load-error" hidden></p></div>
+ <div class="rotate-hint"><svg class="rotate-device" viewBox="0 0 64 64" aria-hidden="true"><rect x="21" y="9" width="24" height="43" rx="3"/><path d="M27 15h12M31 46h4"/></svg><p>Поверните устройство горизонтально</p><small>Для прогулки по убежищу</small></div>
+ <div class="welcome-footer">DAWN OF THE DEAD <span>ОБЩАЯ СХЕМА УБЕЖИЩА</span></div>
+</section>
+<section id="overview" class="screen terminal-screen" aria-label="Общая схема убежища" hidden>
+ <header class="terminal-header"><div><span class="eyebrow">VAULT-TEC / NAVIGATION SYSTEM</span><h1>STARFIELD</h1></div><div class="overview-actions"><button id="overview-orgs">Организации</button><button id="resume" hidden>К прогулке</button></div></header>
+ <div class="overview-layout"><div class="cutaway"><div class="cutaway-roof" aria-hidden="true"><span>ПОВЕРХНОСТЬ</span></div><div id="floors" class="floor-list" aria-label="Уровни убежища"></div><div class="cutaway-base" aria-hidden="true"></div></div>
+ <aside class="floor-info"><span class="eyebrow" id="floor-number">УРОВЕНЬ 0</span><h2 id="floor-title">Вход и контроль</h2><p id="floor-description"></p><div id="floor-locations" class="location-list"></div><div id="floor-orgs" class="floor-orgs"></div><p id="floor-state" class="availability"></p><button id="enter-level" class="primary">Войти на уровень 0</button><div class="overview-note">Выберите этаж на схеме.<br>Внутри — нажмите на пол, чтобы идти.</div></aside></div>
+ <footer class="terminal-footer"><span>ВЕРТИКАЛЬНЫЙ РАЗРЕЗ / СХЕМА КОМПЛЕКСА</span><span>STARFIELD · DOTD</span></footer>
+</section>
+<section id="game" class="screen game" aria-label="Прогулка по нулевому уровню" hidden>
+ <canvas id="world" tabindex="0" aria-label="Изометрическая карта. Нажмите на пол, чтобы идти. Потяните карту для обзора. WASD или стрелки — ходьба, E — действие."></canvas>
+ <header class="game-top"><div class="location-plaque"><span>STARFIELD / УРОВЕНЬ 0</span><strong id="place">Центральное фойе</strong></div><nav aria-label="Управление картой"><button id="levels">Этажи</button><button id="floor-plan">Схема</button><button id="help" aria-label="Как управлять">?</button></nav></header>
+ <div class="camera-tools"><button id="center" aria-label="Показать персонажа">◎</button><button id="zoom-in" aria-label="Приблизить">+</button><button id="zoom-out" aria-label="Отдалить">−</button></div>
+ <div id="status" class="game-status" role="status"></div>
+ <div class="game-bottom"><div class="movement-pad" aria-label="Движение"><button id="move-up" aria-label="Идти вверх">↑</button><button id="move-left" aria-label="Идти влево">←</button><button id="move-down" aria-label="Идти вниз">↓</button><button id="move-right" aria-label="Идти вправо">→</button></div><div class="action-wrap"><span id="target-label">РЕГИСТРАЦИЯ</span><button id="action" class="primary" disabled>Подойдите к объекту</button></div></div>
+ <div id="processing" class="processing" hidden><span>САНИТАРНЫЙ ПРОТОКОЛ</span><strong id="process-label">Подготовка камеры</strong><progress id="process-progress" max="1" value="0"></progress></div>
+</section>
+<div id="dialog-layer" class="dialog-layer" hidden><section id="dialog" role="dialog" aria-modal="true" aria-labelledby="dialog-title" class="terminal-dialog"><header><span id="dialog-kicker" class="eyebrow">STARFIELD</span><button id="dialog-close" aria-label="Закрыть окно">×</button></header><h2 id="dialog-title"></h2><div id="dialog-content"></div></section></div>
+<div id="portrait-guard" class="portrait-guard" hidden><svg class="rotate-device" viewBox="0 0 64 64" aria-hidden="true"><rect x="21" y="9" width="24" height="43" rx="3"/><path d="M27 15h12M31 46h4"/></svg><h2>Поверните экран</h2><p>Карта рассчитана на горизонтальный экран.</p><button id="allow-portrait">Продолжить вертикально</button></div>
+</main>
+<noscript>Для интерактивной карты необходимо включить JavaScript.</noscript>
+</body></html>

@@ -1,1 +1,0 @@
-v20: based on v17-v19. Reworked New Abilene boundary/click zone, Hardstone boundary and district placement, Port Saint-Marie district placement, and Lafayette Marshes territory.
