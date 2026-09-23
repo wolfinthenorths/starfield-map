@@ -4,6 +4,14 @@ const {createCanvas, loadImage} = require(process.env.CODEX_PRIMARY_RUNTIME_NODE
 const src = path.resolve(__dirname, '../../sprites'), out = path.resolve(__dirname, '../assets');
 const files = fs.readdirSync(src);
 const cuts = {
+  vaultLamp: ['Vault Objects.png', 434, 393, 50, 44],
+  vaultVent: ['Vault Objects.png', 435, 438, 34, 37],
+  utilityCabinet: ['Base Furniture.png', 727, 465, 51, 82],
+  waterDispenser: ['Base Furniture.png', 0, 556, 68, 107],
+  supplyCase: ['Base Furniture.png', 43, 1048, 47, 53],
+  steelBench: ['Vault Objects.png', 0, 162, 65, 63],
+  luggageCabinet: ['Vault Objects.png', 264, 162, 86, 66],
+
   receptionMiddle: ['bar-table.png', 267, 0, 67, 76],
   receptionTill: ['bar-table.png', 267, 76, 67, 70],
   receptionCorner: ['bar-table.png', 0, 266, 55, 68],
@@ -21,6 +29,7 @@ const cuts = {
 async function main() {
  const loaded = {};
  for (const [name,[suffix,x,y,w,h]] of Object.entries(cuts)) {
+  if(process.argv.length>2&&!process.argv.slice(2).includes(name))continue;
   const file = files.find(f => f.endsWith(suffix));
   if (!file) throw new Error('Missing sheet: '+suffix);
   const im = loaded[file] ||= await loadImage(path.join(src,file));
@@ -46,7 +55,7 @@ async function main() {
   fs.writeFileSync(path.join(out,name+'-cut.png'),trim.toBuffer('image/png'));
   console.log(name,trim.width,trim.height);
  }
- const preview=createCanvas(1000,450),g=preview.getContext('2d');g.fillStyle='#232c27';g.fillRect(0,0,1000,450);g.imageSmoothingEnabled=false;let i=0;
+ const preview=createCanvas(1000,Math.ceil(Object.keys(cuts).length/6)*145),g=preview.getContext('2d');g.fillStyle='#232c27';g.fillRect(0,0,preview.width,preview.height);g.imageSmoothingEnabled=false;let i=0;
  for(const name of Object.keys(cuts)){const im=await loadImage(path.join(out,name+'-cut.png'));const x=(i%6)*165,y=Math.floor(i/6)*145;g.fillStyle='#ccc59b';g.font='12px monospace';g.fillText(name,x+3,y+14);const scale=Math.min(1.25,155/im.width,120/im.height);g.drawImage(im,x+4,y+21,im.width*scale,im.height*scale);i++;}
  fs.writeFileSync(path.resolve(__dirname,'../../sprite-selection.png'),preview.toBuffer('image/png'));
 }

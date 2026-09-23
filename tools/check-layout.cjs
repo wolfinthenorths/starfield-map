@@ -10,4 +10,6 @@ for(const p of s.shapes)for(let i=0;i<p.length;i++){const a=p[i],b=p[(i+1)%p.len
 assert.equal(gaps.length,0,'Exposed floor boundary has no wall/door: '+JSON.stringify(gaps.slice(0,8)));
 for(const o of s.objects.filter(o=>o.sprite&&!o.z))assert(floor(o.x,o.y),'Sprite foot is outside floor: '+o.id);
 for(const o of s.objects.filter(o=>o.z))assert(s.walls.some(w=>distance(o.x,o.y,w)<.01),'Detached wall fitting: '+o.id);
+assert.equal(s.objects.filter(o=>o.kind==='stairs').length,1,'One residential stair');
+for(const lane of s.clearLanes)for(let y=lane.y;y<lane.y+lane.h;y++)for(let x=lane.x;x<lane.x+lane.w;x++)if(floor(x+.5,y+.5))assert(!s.blocked.has(x+','+y),'Furniture blocks circulation lane '+x+','+y);
 console.log(`PASS: ${checked} exterior samples enclosed by walls or doors; all sprite feet and wall fittings aligned.`);
