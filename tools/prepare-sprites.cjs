@@ -4,6 +4,7 @@ const {createCanvas, loadImage} = require(process.env.CODEX_PRIMARY_RUNTIME_NODE
 const src = path.resolve(__dirname, '../../sprites'), out = path.resolve(__dirname, '../assets');
 const files = fs.readdirSync(src);
 const cuts = {
+  foliage: ['Scenery-004_PID.gif', 2148, 157, 45, 45],
   vaultLamp: ['Vault Objects.png', 434, 393, 50, 44],
   vaultVent: ['Vault Objects.png', 435, 438, 34, 37],
   utilityCabinet: ['Base Furniture.png', 727, 465, 51, 82],
