@@ -41,7 +41,7 @@ async function main() {
   }
   l=w;t=h;r=-1;b=-1;for(const k of largest){l=Math.min(l,k%w);r=Math.max(r,k%w);t=Math.min(t,Math.floor(k/w));b=Math.max(b,Math.floor(k/w));}
   // The source table includes a solid black cast shadow: preserve it as translucent.
-  if(name==='coffeeRound')for(let yy=Math.floor(h*.65);yy<h;yy++)for(let xx=0;xx<w;xx++){const i=(yy*w+xx)*4;if(Math.max(d.data[i],d.data[i+1],d.data[i+2])<12)d.data[i+3]=Math.round(d.data[i+3]*.28);}
+  if(name==='coffeeRound')for(let yy=0;yy<h;yy++)for(let xx=0;xx<w;xx++){const i=(yy*w+xx)*4;if(Math.max(d.data[i],d.data[i+1],d.data[i+2])<12)d.data[i+3]=Math.round(d.data[i+3]*.28);}
   g.putImageData(d,0,0);const trim=createCanvas(r-l+1,b-t+1);trim.getContext('2d').drawImage(c,-l,-t);
   fs.writeFileSync(path.join(out,name+'-cut.png'),trim.toBuffer('image/png'));
   console.log(name,trim.width,trim.height);
