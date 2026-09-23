@@ -15,7 +15,8 @@
 .game .camera-tools{top:auto;bottom:max(14px,env(safe-area-inset-bottom));left:50%;right:auto;transform:translateX(-50%);flex-direction:row;gap:5px}
 .game .camera-tools button{width:42px;min-height:44px;font-size:21px}
 .game .camera-tools #fit{width:auto;padding:6px 11px;font-size:12px}
-.game .action-wrap{max-width:32%}
+.game .camera-tools #foyer-view{width:auto;padding:6px 11px;font-size:12px}
+.game .action-wrap{max-width:30%}
 .game .action-wrap button{min-width:0;min-height:46px;padding:10px 15px;font-size:14px}
 .game .game-status{bottom:76px;max-width:min(510px,60%)}
 .keyboard-hint{display:none;font-size:11px;line-height:1.8;color:#a9b29a;background:#152019d9;padding:7px 11px;border-left:2px solid #79805c}
