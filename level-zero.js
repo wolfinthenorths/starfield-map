@@ -50,21 +50,21 @@ window.createLevelZero = function () {
  };
  // Broad modular reception; neighboring one-tile sprites touch on the same grid.
  for(let i=0;i<6;i++)prop(i===2?'registration':'counterPart'+i,i===2?'receptionTill':'receptionMiddle',16.5+i,11.5,1.16,{...(i===2?{action:'registration',label:'Оформить заселение',target:'РЕГИСТРАЦИЯ',approach:[18.5,12.5]}:{})});
- for(const x of[16.5,21.5])prop('counterWing'+x,'receptionMiddle',x,10.5,1.16);
- for(const x of[18,20])prop('receptionChair'+x,'receptionSeat',x,9.4,1.18);
+ for(const x of[16.5,21.5])prop('counterWing'+x,'receptionMiddle',x,10.5,1.16,{flip:true});
+ for(const x of[18,20])prop('receptionChair'+x,'receptionSeat',x+.5,9.5,1.5);
  prop('receptionSign',null,19,7.7,1,{kind:'sign',blocked:false,depth:25.6});
- prop('welcomeScreen','screen',16.1,8.7,1.08,{action:'welcome',label:'Прочитать приветствие',target:'VAULT-TEC ВАС ЖДАЛИ',approach:[15.5,10.5]});
- prop('mainTerminal','console',23.4,10.7,1.4,{action:'terminal',label:'Открыть главный терминал',target:'ГЛАВНЫЙ ТЕРМИНАЛ',approach:[23.5,12.5]});
+ prop('welcomeScreen','screen',14.5,10.5,.78,{action:'welcome',label:'Прочитать приветствие',target:'VAULT-TEC ВАС ЖДАЛИ',approach:[15.5,11.5]});
+ prop('mainTerminal','console',23.5,10.5,1.15,{action:'terminal',label:'Открыть главный терминал',target:'ГЛАВНЫЙ ТЕРМИНАЛ',approach:[23.5,12.5]});
  for(const [i,x,y]of[[0,15,8.8],[1,24.2,8.9]])prop('receptionLamp'+i,'lamp',x,y,1.05,{light:true});
  for(const [i,x,y]of[[0,14,9.2],[1,25.3,10.4],[2,9.9,14.3],[3,11.8,23.7],[4,28.1,14.1],[5,26.2,26.6]])prop('plant'+i,'cactus',x,y,.95,{planter:true});
  // Matching leather sofas and green upholstery, in two compact waiting groups.
- for(const [i,x,y]of[[0,11.8,17.2],[1,15.3,24.8]]){
+ for(const [i,x,y]of[[0,11.5,16.5],[1,14.5,23.5]]){
   prop('sofa'+i,'sofa',x,y,1.6,{footprint:[Math.floor(x)-1,Math.floor(y)-1,2,1]});
-  prop('coffeeTable'+i,'coffeeRound',x+2,y+.8,1.15,{action:'magazines',label:'Посмотреть брошюры',target:'ЗОНА ОЖИДАНИЯ',approach:[x+1.5,y+2.3]});
-  prop('loungeChair'+i,'loungeChair',x+3.1,y+2,1.2,{flip:true});
+  prop('coffeeTable'+i,'coffeeRound',x+2,y+1,1.15,{foot:.92,action:'magazines',label:'Посмотреть брошюры',target:'ЗОНА ОЖИДАНИЯ',approach:[x+3,y+1.5]});
+  prop('loungeChair'+i,'loungeChair',x,y+2,1.3,{flip:true});
   prop('waitingLamp'+i,'lamp',x-1,y+1.7,.95,{light:true});
  }
- prop('notice','screen2',11.2,13.4,.9,{action:'notices',label:'Прочитать объявления',target:'СООБЩЕНИЯ УБЕЖИЩА',approach:[12.5,13.5]});
+ prop('notice','screen2',10.5,12.5,.7,{action:'notices',label:'Прочитать объявления',target:'СООБЩЕНИЯ УБЕЖИЩА',approach:[11.5,13.5]});
  prop('residential','terminal',26.6,12.8,1,{action:'residential',label:'Узнать маршрут к спальням',target:'ЖИЛОЙ СЕКТОР',approach:[25.5,13.5]});
  prop('stairA',null,6.2,18,1,{kind:'stairs',axis:'x',action:'stairs',label:'Лестница A · жилой сектор',target:'УРОВЕНЬ 1 · ПЕРЕХОД A',approach:[8.5,18.5],footprint:[3,15,4,6]});
  prop('stairB',null,20,3,1,{kind:'stairs',axis:'y',action:'stairs',label:'Лестница B · жилой сектор',target:'УРОВЕНЬ 1 · ПЕРЕХОД B',approach:[20.5,6.5],footprint:[17,0,6,4]});
@@ -80,10 +80,20 @@ window.createLevelZero = function () {
  prop('entryLamp','lamp',23.2,45.7,.9,{light:true});
  prop('surfacePanel','terminal',39.6,16.8,.9,{action:'denied',label:'Запросить доступ на Поверхность',target:'ОСОБЫЙ ДОПУСК',approach:[39.5,18.5]});
  prop('surfaceInfo','screen2',33.5,16.6,.8,{action:'surfaceInfo',label:'Прочитать ограничения',target:'ИЗОЛИРОВАННЫЙ ШЛЮЗ',approach:[33.5,18.5]});
- prop('surfaceMachine','wallMachine',37.6,16.5,.8,{footprint:[36,16,2,1]});
+ prop('surfaceMachine','wallMachine',37.6,16.5,.8,{flip:true,footprint:[36,16,2,1]});
  prop('serviceBox','box',29.2,24.8,1.2,{action:'chest',label:'Открыть ящик',target:'ЗАПАСНЫЕ ФИЛЬТРЫ',approach:[27.5,24.5]});
  for(const [i,x,y]of[[0,12.7,8.7],[1,10.4,10.9],[2,27,8.5]])prop('vent'+i,'airVent',x,y,1.25,{blocked:false,z:1.3});
  for(const [i,x,y]of[[0,14.6,7.3],[1,9,12.8],[2,24.8,6.9]])prop('wallLight'+i,'lampWall',x,y,1.35,{blocked:false,z:1.45});
+ for(const o of s.objects.filter(o=>o.z)){
+  let nearest=null,distance=Infinity;
+  for(const w of s.walls.filter(w=>!w.internal)){
+   const u=Math.max(0,Math.min(w.span,(o.x-w.x)*w.ux+(o.y-w.y)*w.uy));
+   const x=w.x+w.ux*u,y=w.y+w.uy*u,d=Math.hypot(o.x-x,o.y-y);
+   if(d<distance){distance=d;nearest={x,y,w};}
+  }
+  o.x=nearest.x;o.y=nearest.y;o.depth=o.x+o.y+1;
+  o.flip=nearest.w.ux+nearest.w.uy>0;
+ }
  s.labels=[['РЕГИСТРАЦИЯ',19,10.8,2.6],['ЛЕСТНИЦА A · ЖИЛОЙ СЕКТОР',6.5,16,2.5],['ЛЕСТНИЦА B · ЖИЛОЙ СЕКТОР',20,3.5,2.6],['ИЗ СИСТЕМЫ БУНКЕРОВ',20,47.5,2.65],['ДЕЗАКТИВАЦИЯ',20,40,2.7],['КОНТРОЛЬ ДОСТУПА',20,32,2.7],['ПОВЕРХНОСТЬ',41.5,18.5,2.8]];
  s.chambers={A:{x:16.25,y:36.3,w:3.5,h:5.4},B:{x:20.25,y:36.3,w:3.5,h:5.4}};
  return s;

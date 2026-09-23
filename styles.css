@@ -23,3 +23,17 @@
 @media(pointer:fine){.game .movement-pad{display:none}.keyboard-hint{display:block}}
 @media(max-height:520px) and (orientation:landscape){.game .location-plaque{max-width:65%;padding:6px 9px;gap:8px}.game .location-plaque span{font-size:10px}.game .location-plaque strong{font-size:12px;padding-left:8px}.game .game-top nav button{min-height:44px}.game .game-status{bottom:62px}.game .action-wrap button{font-size:12px;padding:8px 11px}.game .action-wrap span{font-size:10px}.game .camera-tools{bottom:max(10px,env(safe-area-inset-bottom))}}
 @media(max-width:750px){.game .location-plaque{max-width:58%}.game .location-plaque span{display:none}.game .location-plaque strong{border:0;padding:0}.game .camera-tools{top:66px;bottom:auto;left:auto;right:max(14px,env(safe-area-inset-right));transform:none}.game .action-wrap{max-width:51%}.game .game-status{max-width:70%;bottom:106px}}
+
+/* Keep Safari's text inflation independent of opening dialogs and rotating the device.
+   Browser zoom remains available; controls keep a stable, readable font size. */
+html{ -webkit-text-size-adjust:100%; text-size-adjust:100%; }
+.dialog-layer{position:fixed;min-width:0;min-height:0;overflow:hidden;}
+.terminal-dialog{min-width:0;max-height:100%;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scrollbar-gutter:stable;font-size:16px;line-height:1.5;}
+.terminal-dialog h2{font-size:24px;line-height:1.25;overflow-wrap:anywhere;}
+.terminal-dialog p,.terminal-dialog button,.terminal-dialog label,.terminal-dialog input,.terminal-dialog .result{font-size:16px;line-height:1.5;}
+.terminal-dialog .small{font-size:12px;}
+.terminal-dialog input{font-size:16px;}
+.terminal-dialog button{white-space:normal;overflow-wrap:anywhere;}
+.terminal-dialog>header button{font-size:24px;flex-shrink:0;}
+.denied .terminal-dialog h2{font-size:clamp(28px,4vw,48px);}
+@media(max-height:520px) and (orientation:landscape){.dialog-layer{padding:12px max(18px,env(safe-area-inset-right)) 12px max(18px,env(safe-area-inset-left));}.terminal-dialog{padding:12px 18px;}.terminal-dialog h2{font-size:22px;margin-bottom:10px;}.terminal-dialog p{margin:8px 0;}}
