@@ -4,6 +4,12 @@ const {createCanvas, loadImage} = require(process.env.CODEX_PRIMARY_RUNTIME_NODE
 const src = path.resolve(__dirname, '../../sprites'), out = path.resolve(__dirname, '../assets');
 const files = fs.readdirSync(src);
 const cuts = {
+  baggageLockers: ['Scenery-002_PID.gif', 2420, 367, 51, 112],
+  kioskX: ['Base Furniture.png', 84, 706, 44, 73],
+  kioskY: ['Base Furniture.png', 128, 706, 44, 73],
+  kioskNegX: ['Base Furniture.png', 43, 709, 42, 70],
+  kioskNegY: ['Base Furniture.png', 0, 709, 43, 70],
+  receptionSeatY: ['chairs.png', 102, 0, 32, 42],
   foliage: ['Scenery-004_PID.gif', 2148, 157, 45, 45],
   vaultLamp: ['Vault Objects.png', 434, 393, 50, 44],
   vaultVent: ['Vault Objects.png', 435, 438, 34, 37],
@@ -51,7 +57,7 @@ async function main() {
   }
   l=w;t=h;r=-1;b=-1;for(const k of largest){l=Math.min(l,k%w);r=Math.max(r,k%w);t=Math.min(t,Math.floor(k/w));b=Math.max(b,Math.floor(k/w));}
   // The source table includes a solid black cast shadow: preserve it as translucent.
-  if(name==='coffeeRound')for(let yy=0;yy<h;yy++)for(let xx=0;xx<w;xx++){const i=(yy*w+xx)*4;if(Math.max(d.data[i],d.data[i+1],d.data[i+2])<12)d.data[i+3]=Math.round(d.data[i+3]*.28);}
+  if(name==='coffeeRound'||name==='receptionSeatY')for(let yy=0;yy<h;yy++)for(let xx=0;xx<w;xx++){const i=(yy*w+xx)*4;if(Math.max(d.data[i],d.data[i+1],d.data[i+2])<12)d.data[i+3]=Math.round(d.data[i+3]*.28);}
   g.putImageData(d,0,0);const trim=createCanvas(r-l+1,b-t+1);trim.getContext('2d').drawImage(c,-l,-t);
   fs.writeFileSync(path.join(out,name+'-cut.png'),trim.toBuffer('image/png'));
   console.log(name,trim.width,trim.height);
