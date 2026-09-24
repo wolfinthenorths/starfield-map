@@ -9,7 +9,7 @@ async function boot(saved){
  let tick,now=0;const storage=new Map(saved?[['starfield-character-class',saved]]:[]),window={innerWidth:844,innerHeight:390,devicePixelRatio:3,addEventListener(){},sessionStorage:{getItem:k=>storage.get(k),setItem:(k,v)=>storage.set(k,v)}};
  const env={window,document:{getElementById:id=>elements[id],createElement:()=>createCanvas(1,1),addEventListener(){},hidden:false},console,Image,ResizeObserver:class{observe(){}},requestAnimationFrame:f=>tick=f};
  vm.runInNewContext(fs.readFileSync(path.join(dir,'level-zero.js'),'utf8'),env);env.createLevelZero=window.createLevelZero;
- const code=fs.readFileSync(path.join(dir,'engine.js'),'utf8').replace('new ResizeObserver(resize)','window.test={state,player,level,pass,pathTo,request,act,updateAction,canStep,startDecon,setDoor};new ResizeObserver(resize)').replace('if(dirty)render();','if(false)render();');vm.runInNewContext(code,env);
+ const code=fs.readFileSync(path.join(dir,'engine.js'),'utf8').replace('new ResizeObserver(resize)','window.test={state,player,level,pass,pathTo,request,act,updateAction,canStep,startDecon,setDoor,move};new ResizeObserver(resize)').replace('if(dirty)render();','if(false)render();');vm.runInNewContext(code,env);
  const api=window.Bunker;await api.ready;api.start();const d=window.test,actions=[];api.onAction=a=>actions.push(a);
  const frames=n=>{for(let i=0;i<n;i++){now+=1000/30;tick(now);assert(d.pass(d.player.x,d.player.y),'collision at '+d.player.x+','+d.player.y);}};
  const object=id=>[...d.level.doors,...d.level.objects].find(o=>o.id===id);
@@ -31,5 +31,11 @@ async function boot(saved){
  // Opening occupied doorway remains safe, including an accidental closure request.
  const door=object('surfaceInner');d.player.x=35;d.player.y=18.5;d.state.path=[];d.setDoor(door,true);d.state.anim[door.id]=1;frames(360);assert(d.state.open[door.id]);d.state.open[door.id]=false;frames(2);assert(d.state.open[door.id],'Occupied door reopens');
  const b=await boot('resident');assert.equal(b.api.getPass().characterClass,'resident');assert.equal(b.api.getPass().approved,false,'Reload does not bypass checkpoint');b.go('cleanOuterB');b.d.act();b.frames(32);b.go('cleanControlB');b.d.act();b.frames(230);assert(b.d.state.cleaned.B);assert(!b.d.state.cleaned.A);
+ // Direction follows actual displacement; a blocked step never advances the animation.
+ d.player.x=20.5;d.player.y=19.5;d.state.path=[];
+ for(const [dx,dy,expected] of [[1,0,1],[0,1,2],[-1,0,3],[0,-1,0]]){assert(d.move(dx,dy,.02));assert.equal(d.player.facing,expected,'Sprite faces opposite to movement');}
+ const payloads=[];api.onAction=(name,id)=>payloads.push([name,id]);
+ for(const o of d.level.objects.filter(o=>o.action==='container')){d.player.x=o.approach[0];d.player.y=o.approach[1];d.state.selected=o;d.updateAction();d.act();assert.deepEqual(payloads.at(-1),['container',o.inventory],'Container does not open its own inventory');}
+ console.log('PASS: character directions and container payloads.');
  console.log('PASS: one stair; all three classes; class required before admission; session class restore; both decon chambers; automatic closure in both directions; occupied-door safety; all approaches; 844×390 DPR3.');
 })().catch(e=>{console.error(e);process.exitCode=1});

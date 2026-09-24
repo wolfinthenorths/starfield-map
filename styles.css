@@ -46,3 +46,16 @@ html{ -webkit-text-size-adjust:100%; text-size-adjust:100%; }
 .game .location-plaque{min-width:0;}
 .game .game-top nav{flex-shrink:0;}
 @media(max-height:520px) and (orientation:landscape){.game .game-top nav button{font-size:12px;padding:7px 10px;}.class-options{margin:10px 0;}.class-options label{padding:10px;}}
+
+/* Containers share a stable inventory view; media can be added per row without changing the layout. */
+.inventory .terminal-dialog{width:min(720px,100%);}
+.inventory-scroll{max-width:100%;overflow-x:auto;margin:18px 0;}
+.inventory-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:15px;line-height:1.5;}
+.inventory-table caption{text-align:left;text-transform:uppercase;font-size:12px;letter-spacing:.1em;color:#94ac83;padding:0 0 10px;}
+.inventory-table th,.inventory-table td{padding:13px 14px;border:1px solid #395642;vertical-align:middle;overflow-wrap:anywhere;text-align:left;}
+.inventory-table thead{background:#1d3223;color:#d5dcb4;}
+.inventory-table th{font-weight:400;}
+.inventory-table tbody th{width:48%;color:#c6d3a9;background:#112219;}
+.inventory-table td{color:#8eae91;}
+.inventory-table img{width:48px;height:48px;object-fit:contain;image-rendering:pixelated;float:left;margin:0 12px 0 0;}
+@media(max-height:520px){.inventory-table th,.inventory-table td{padding:9px 12px;}.inventory-scroll{margin:12px 0;}}
