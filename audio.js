@@ -1,6 +1,6 @@
 'use strict';
 (()=>{
- const files=['click','confirm','denied','box-open','box-close','door-open','door-close'];
+ const files=['click','confirm','denied','box-open','box-close','door-open','door-close','robot'];
  let ctx,musicGain,fxGain,music,unlocked=false,loading=false,steam=null;
  const buffers=new Map(),voices=new Set();
  const prefs={music:true,effects:true};

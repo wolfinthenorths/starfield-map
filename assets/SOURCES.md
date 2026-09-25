@@ -49,3 +49,5 @@ https://drive.google.com/drive/folders/1lHiN5RV-PoGY-xiBOwT84KhPHkp43fii
 - `items/tape.png`: Fallout New Vegas duct tape, [источник](https://www.nicepng.com/maxp/u2q8y3e6o0a9o0u2/).
 - `items/cup.png`: Fallout 4 Far Harbor coffee cup, [источник](https://www.clipartmax.com/middle/m2i8b1Z5K9A0i8b1_fo4fh-coffee-cup-fallout-4-coffee/).
 - Игровые изображения принадлежат правообладателям Fallout. Указание источника не означает отдельную лицензию. Миниатюры обрезаны по содержимому, светлый фон удалён там, где он был однотонным; пропорции сохранены в общей ячейке 96×96. Содержимое сгруппировано в показанные наборы.
+
+Дополнение: `audio/robot.mp3` — Kenney Sci-fi Sounds, computerNoise_001 (CC0), фрагмент 1,2 секунды с плавными краями и смягчением высоких частот. У миниатюр удалены оставшиеся белые и клетчатые подложки внутри замкнутых областей.
