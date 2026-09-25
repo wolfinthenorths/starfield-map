@@ -54,10 +54,18 @@ window.createLevelZero = function () {
   const sprite=facing[0]>0?'kioskX':facing[0]<0?'kioskNegX':facing[1]>0?'kioskY':'kioskNegY';
   return prop(id,sprite,x,y,scale,{...extra,facing});
  };
- // Broad modular reception; neighboring one-tile sprites touch on the same grid.
+ // Enclosed reception island. Every counter module occupies the same one-tile grid.
  for(let i=0;i<6;i++)prop(i===2?'registration':'counterPart'+i,i===2?'receptionTill':'receptionMiddle',16.5+i,11.5,1.16,{...(i===2?{action:'registration',label:'Оформить заселение',target:'РЕГИСТРАЦИЯ',approach:[18.5,12.5]}:{})});
- for(const x of[16.5,21.5])prop('counterWing'+x,'receptionMiddle',x,10.5,1.16,{flip:true});
+ for(const x of[16.5,21.5])for(const y of[9.5,10.5]){
+  const gate=x===16.5&&y===9.5;
+  prop('counterWing'+x+'_'+y,gate?'receptionGate':'receptionMiddle',x,y,1.16,{flip:!gate});
+ }
+ for(let i=0;i<6;i++)prop('counterBack'+i,i===3?'receptionWorktop':'receptionMiddle',16.5+i,8.5,1.16,{flip:true});
  for(const x of[18,20])prop('receptionChair'+x,'receptionSeatY',x+.5,10.1,1.5,{facing:[0,1]});
+ // Two short banks rest against the straight centre facet of the circular wall.
+ // Their native isometric direction is preserved; no cabinet is bent around the arc.
+ for(const [i,x]of[16.8,17.8,22.1,23.1].entries())
+  prop('archiveCabinet'+i,'archiveCabinet',x,6.95,1.05,{flip:true,footprint:[Math.floor(x),6,1,1],facing:[0,1]});
  // One main public terminal; greeting and instructions are fixed to the architecture below.
  kiosk('mainTerminal',23.5,10.5,1.3,{action:'terminal',label:'Открыть главный терминал',target:'ГЛАВНЫЙ ТЕРМИНАЛ',approach:[23.5,12.5]});
  // Two quiet seating pockets, facing the open hall. The central route remains clear.
@@ -102,7 +110,10 @@ window.createLevelZero = function () {
   return o;
  };
  mount('welcomeScreen','welcomePoster',14,7.6,1.45,1.65,1.25,{action:'welcome',label:'Прочитать приветствие',target:'VAULT-TEC ВАС ЖДАЛИ',approach:[14.5,9.5]});
- mount('notice','noticePanel',22.2,6,1.42,1.25,.95,{action:'notices',label:'Прочитать памятку',target:'ПАМЯТКА ПРИБЫВШЕМУ',approach:[22.5,8.5]});
+ mount('notice','noticePanel',25.3,7.1,1.42,1.25,.95,{action:'notices',label:'Прочитать памятку',target:'ПАМЯТКА ПРИБЫВШЕМУ',approach:[24.5,8.5]});
+ mount('receptionPoster','welcomePoster',18.9,6,1.22,.95,1.14,{wallDisplay:true});
+ mount('receptionCommunity','communityPoster',20.1,6,1.22,.95,1.14,{wallDisplay:true});
+ mount('receptionClock','receptionClock',19.5,6,1.94,.6,.6,{wallDisplay:true});
  mount('airlockScreen','entryPanel',16,46,1.5,1.4,1,{action:'airlock',label:'Прочитать инструкцию',target:'ВХОД ИЗ СИСТЕМЫ БУНКЕРОВ',approach:[18.5,46.5]});
  mount('surfaceInfo','surfaceDisplay',38.5,16,1.5,1.65,1.12,{action:'surfaceInfo',label:'Прочитать ограничения',target:'ВНЕШНИЙ КОНТУР',approach:[38.5,18.5]});
  mount('surfaceSystems','systemsPanel',36.5,16,1.4,.8,.9,{action:'systems',label:'Проверить системы убежища',target:'ЖИЗНЕОБЕСПЕЧЕНИЕ',approach:[36.5,18.5]});
@@ -116,7 +127,7 @@ window.createLevelZero = function () {
    const panel=s.walls.find(p=>Math.abs(p.x+p.ux*p.span/2-x)<.001&&Math.abs(p.y+p.uy*p.span/2-y)<.001&&p.internal===wall.internal);
    panel.fittings??=[];
    for(const [type,z,width,height]of[['stripLight',2.13,.72,.17],['vaultVent',.56,.7,.4]]){
-    if(panel.fittings.some(o=>o.action))continue;
+    if(panel.fittings.some(o=>o.action||o.wallDisplay))continue;
     const fitting=prop(type+f+'_'+i,type,x,y,1,{kind:'fixture',blocked:false,mount:true,z,width:Math.min(width,step*.8),height,ux:wall.ux,uy:wall.uy,low:wall.low,depth:x+y});
     panel.fittings.push(fitting);
    }

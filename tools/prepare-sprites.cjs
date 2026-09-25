@@ -4,6 +4,9 @@ const {createCanvas, loadImage} = require(process.env.CODEX_PRIMARY_RUNTIME_NODE
 const src = path.resolve(__dirname, '../../sprites'), out = path.resolve(__dirname, '../assets');
 const files = fs.readdirSync(src);
 const cuts = {
+  archiveCabinet: ['Cupboards.png', 281, 383, 53, 100],
+  receptionGate: ['bar-table.png', 217, 282, 39, 52],
+  receptionWorktop: ['bar-table.png', 0, 76, 67, 70],
   foliageRound: ['Scenery-004_PID.gif', 2284, 159, 50, 47],
   uniformCrate: ['Base Furniture.png', 175, 1046, 45, 55],
   baggageLockers: ['Scenery-002_PID.gif', 2420, 367, 51, 112],

@@ -25,7 +25,7 @@ window.Bunker=(()=>{
   surfaceTextures.wall=faceTexture(darkImages.wallA,[2,12],[36,29],[2,96],40,100);
   surfaceTextures.detail=faceTexture(darkImages.wallDetailA,[2,12],[37,29],[2,96],40,100);
   surfaceTextures.door=faceTexture(darkImages.door,[48,64],[105,50],[48,126],64,96);
-  for(const name of['stripLight','welcomePoster','noticePanel','entryPanel','surfaceDisplay','systemsPanel'])surfaceTextures[name]=images[name];
+  for(const name of['stripLight','welcomePoster','noticePanel','entryPanel','surfaceDisplay','systemsPanel','communityPoster','receptionClock'])surfaceTextures[name]=images[name];
   const vent=document.createElement('canvas');vent.width=56;vent.height=36;const vg=vent.getContext('2d');vg.imageSmoothingEnabled=false;vg.drawImage(surfaceTextures.wall,0,0,56,36);vg.fillStyle='#26362f';vg.fillRect(3,3,50,30);vg.drawImage(surfaceTextures.grate,0,0,64,64,6,6,44,24);vg.strokeStyle='#788378';vg.strokeRect(.5,.5,55,35);for(const x of[3,52])for(const y of[3,32]){vg.fillStyle='#a3aaa0';vg.fillRect(x,y,1,1);}surfaceTextures.vaultVent=vent;
   const glow=document.createElement('canvas');glow.width=64;glow.height=96;const g=glow.getContext('2d'),grad=g.createRadialGradient(32,22,2,32,30,58);grad.addColorStop(0,'#fff0bc75');grad.addColorStop(.4,'#ead8a330');grad.addColorStop(1,'#ead8a300');g.fillStyle=grad;g.fillRect(0,0,64,96);surfaceTextures.lampGlow=glow;
  }
