@@ -36,3 +36,16 @@ https://drive.google.com/drive/folders/1lHiN5RV-PoGY-xiBOwT84KhPHkp43fii
 - Второе растение: PID 943, **Scenery-004_PID.gif**. Контейнер с формой: **Base Furniture.png**. Эти листы уже были предоставлены пользователем.
 - Плакат приветствия использует кадр предоставленной **JoinMyParty1.gif**; металлические рамки панелей и ламп используют текстуру **Vault Wall**. Надписи и индикаторы добавлены кодом как элементы интерфейса окружения. Это прозрачные плоские материалы, проецируемые непосредственно на общие стеновые панели.
 - Световое пятно — эффект Canvas на стене и полу. Нейросетевые изображения не используются.
+
+## Звук и предметы — 25 сентября
+
+- Музыка: **Lobby Time**, Kevin MacLeod (incompetech.com), [страница композиции](https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1600054), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Полный трек перекодирован в моно MP3 64 kbit/s. Громкость задаётся в приложении.
+- Короткие эффекты: [Kenney Interface Sounds](https://kenney.nl/assets/interface-sounds) (click_001, confirmation_001, error_003) и [Kenney Sci-fi Sounds](https://kenney.nl/assets/sci-fi-sounds) (doorOpen_000/001, doorClose_000/001), CC0. Перекодированы в MP3 для мобильных браузеров. Шипение дезактивации — фильтрованный шум Web Audio.
+- `items/battery.png`, `filter.png`, `medical.png`, `lamp.png`: пользовательская коллекция Google Drive, файлы «Предвоенные аккумуляторные блоки.png», «Ручные фильтры.png», «Аптечка первой помощи.webp», «Химические лампы.png».
+- `items/locker.png`: предоставленный ранее спрайт багажа Fallout, Scenery-002_PID.gif.
+- `items/uniform.png`: Fallout 4, [Fo4 folded jumpsuit back.jpg](https://fallout.fandom.com/wiki/File:Fo4_folded_jumpsuit_back.jpg).
+- `items/bag.png`: Fallout 4 duffle bag, [источник](https://www.nicepng.com/maxp/u2q8e6r5u2q8u2e6/).
+- `items/mask.png`: Fallout gas mask with goggles, [источник](https://www.pngkit.com/bigpic/u2e6y3i1t4t4t4y3/).
+- `items/tape.png`: Fallout New Vegas duct tape, [источник](https://www.nicepng.com/maxp/u2q8y3e6o0a9o0u2/).
+- `items/cup.png`: Fallout 4 Far Harbor coffee cup, [источник](https://www.clipartmax.com/middle/m2i8b1Z5K9A0i8b1_fo4fh-coffee-cup-fallout-4-coffee/).
+- Игровые изображения принадлежат правообладателям Fallout. Указание источника не означает отдельную лицензию. Миниатюры обрезаны по содержимому, светлый фон удалён там, где он был однотонным; пропорции сохранены в общей ячейке 96×96. Содержимое сгруппировано в показанные наборы.
