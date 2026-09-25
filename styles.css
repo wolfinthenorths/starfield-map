@@ -76,3 +76,29 @@ html{ -webkit-text-size-adjust:100%; text-size-adjust:100%; }
 
 /* Keep the map usable at short landscape heights and large desktop sizes. */
 @media(max-height:440px) and (orientation:landscape){.game .camera-tools{gap:4px}.game .camera-tools button{min-width:40px;padding:6px 9px;min-height:40px}.game .camera-tools button:first-child{min-width:104px}.game .action-wrap{max-width:31%}.game .action-wrap button{min-width:0;min-height:44px}.game .game-bottom{gap:8px}.game .keyboard-hint{font-size:10px;max-width:140px}.inventory .terminal-dialog{max-height:calc(100dvh - 20px)}.inventory-table img{width:64px;height:64px}.inventory-table .inventory-picture{width:88px}.inventory-table th,.inventory-table td{padding:7px 10px}}
+
+.audio-notice{position:absolute;z-index:15;top:84px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:14px;max-width:calc(100% - 32px);padding:10px 14px;background:#14271bed;border:1px solid #8aa378;font-size:14px}.audio-notice button{white-space:nowrap;font-size:14px;padding:8px 12px}.sound-toggle[data-state=loading]{border-style:dashed}
+/* Desktop typography scales with the display, independently of map zoom. */
+@media(min-width:1000px) and (min-height:600px){
+ :root{--desktop-text:clamp(18px,1.05vw,28px);--desktop-small:clamp(14px,.82vw,22px);--desktop-title:clamp(30px,2vw,54px);--desktop-control:clamp(48px,3vw,76px);--ui:var(--desktop-text)}
+ .eyebrow,.boot-mark,.welcome-footer,.terminal-footer,.overview-note{font-size:var(--desktop-small)}
+ .welcome h1{font-size:clamp(30px,2vw,52px)}.welcome .primary{font-size:var(--desktop-text);min-height:var(--desktop-control)}
+ .terminal-screen{padding:clamp(24px,2vw,52px)}.terminal-header h1{font-size:clamp(38px,2.8vw,72px)}
+ .overview-layout{grid-template-columns:minmax(380px,1.05fr) minmax(360px,1fr);gap:clamp(28px,4vw,100px)}
+ .cutaway{max-width:none}.cutaway-roof span{font-size:var(--desktop-small)}.cutaway-roof{height:clamp(26px,1.6vw,42px)}
+ .floor-row{font-size:var(--desktop-text);min-height:clamp(42px,2.55vw,66px);line-height:1.25}.floor-row.tech{font-size:var(--desktop-small);min-height:clamp(36px,2.1vw,54px)}
+ .floor-tag{padding-right:12px}.floor-section{padding:6px clamp(22px,1.6vw,40px);gap:10px}.floor-symbol{font-size:var(--desktop-text);width:1.1em}.floor-ready{font-size:var(--desktop-small)}
+ .floor-info{gap:clamp(18px,1.3vw,32px)}.floor-info h2{font-size:var(--desktop-title);max-width:26ch}.floor-info p,.location-list,.floor-orgs{font-size:var(--desktop-text);max-width:48ch;line-height:1.6}
+ .floor-info .availability{font-size:var(--desktop-small)}.floor-info .primary{font-size:var(--desktop-text);min-height:var(--desktop-control);max-width:100%}.overview-actions button{font-size:var(--desktop-text)}
+ .game .game-top{padding:clamp(16px,1vw,28px);gap:18px}.game .game-top nav{gap:8px}.game .game-top button{font-size:var(--desktop-text);min-width:var(--desktop-control);min-height:var(--desktop-control);padding:10px 14px}
+ .game .game-top .sound-toggle{font-size:clamp(24px,1.7vw,40px)}.sound-toggle svg,.fullscreen-toggle svg{width:clamp(24px,1.5vw,36px);height:clamp(24px,1.5vw,36px)}
+ .game .location-plaque{gap:14px;padding:10px 14px;min-height:var(--desktop-control);flex-wrap:wrap;max-width:52%}.game .location-plaque span{font-size:var(--desktop-small)}.game .location-plaque strong{font-size:var(--desktop-text);border-left:0;padding:0}
+ .game .camera-tools{gap:8px;bottom:clamp(18px,1.3vw,32px)}.game .camera-tools button{min-width:var(--desktop-control);width:auto;min-height:var(--desktop-control);font-size:clamp(24px,1.6vw,38px);padding:8px 14px}.game .camera-tools #fit,.game .camera-tools #foyer-view{font-size:var(--desktop-text);padding:8px 16px}
+ .game .game-bottom{left:clamp(18px,1.3vw,32px);right:clamp(18px,1.3vw,32px);bottom:clamp(18px,1.3vw,32px)}.game .keyboard-hint{font-size:var(--desktop-small);max-width:23%;padding:10px 12px}
+ .game .action-wrap{max-width:27%}.game .action-wrap span{font-size:var(--desktop-small);white-space:normal}.game .action-wrap button{font-size:var(--desktop-text);min-height:var(--desktop-control)}.game .game-status{font-size:var(--desktop-small);bottom:clamp(108px,6.5vw,166px)}
+ .processing{top:clamp(100px,6vw,160px)}.processing span{font-size:var(--desktop-small)}.processing strong{font-size:var(--desktop-text)}
+ .terminal-dialog,.inventory .terminal-dialog{width:min(1100px,64vw);font-size:var(--desktop-text);padding:clamp(24px,2vw,48px)}.terminal-dialog h2{font-size:var(--desktop-title)}
+ .terminal-dialog p,.terminal-dialog button,.terminal-dialog label,.terminal-dialog input,.terminal-dialog .result,.inventory-table,.org-list p{font-size:var(--desktop-text)}.terminal-dialog .small,.class-options legend,.org-list small,.inventory-table caption{font-size:var(--desktop-small)}.terminal-dialog>header button{min-height:var(--desktop-control);width:var(--desktop-control);font-size:30px}
+ .inventory-table .inventory-picture{width:clamp(112px,7vw,178px)}.inventory-table img{width:clamp(80px,5vw,128px);height:clamp(80px,5vw,128px)}
+ .audio-notice{top:clamp(96px,6vw,160px);font-size:var(--desktop-small)}.audio-notice button{font-size:var(--desktop-small)}
+}
