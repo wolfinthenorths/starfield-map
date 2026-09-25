@@ -1,0 +1,16 @@
+{
+  "id": "/",
+  "name": "Starfield · Интерактивная карта",
+  "short_name": "Starfield",
+  "lang": "ru",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#060d09",
+  "theme_color": "#060d09",
+  "icons": [
+    {"src": "assets/app-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "assets/app-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"}
+  ]
+}

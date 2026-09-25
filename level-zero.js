@@ -78,7 +78,7 @@ window.createLevelZero = function () {
  // A single bank of metal luggage cells faces the foyer, with a clear aisle in front.
  for(let i=0;i<6;i++)prop(i===2?'baggage':'lockerBank'+i,'baggageLockers',10.8,12.4+i*.58,.83,{facing:[1,0],...(i===2?{action:'container',inventory:'baggage',label:'Осмотреть ячейки хранения',target:'ХРАНЕНИЕ БАГАЖА',approach:[12.5,14.5]}:{})});
  // Emergency supplies belong to the service airlock, away from reception and luggage.
- prop('serviceBox','box',36.6,17.1,1.5,{foot:.88,action:'container',inventory:'filters',openSprite:'boxOpen',label:'Открыть ящик с фильтрами',target:'ЗАПАСНЫЕ ФИЛЬТРЫ',approach:[36.5,19.5]});
+ prop('serviceBox','box',36.6,17.1,1.5,{foot:.88,action:'container',inventory:'filters',label:'Открыть ящик с фильтрами',target:'ЗАПАСНЫЕ ФИЛЬТРЫ',approach:[36.5,19.5]});
  prop('filters','supplyCase',38.3,17.1,1.25,{foot:.88,action:'container',inventory:'emergency',label:'Открыть аварийный комплект',target:'АВАРИЙНЫЙ КОМПЛЕКТ',approach:[38.5,19.5]});
  prop('shaft',null,20,19,1,{kind:'floorMarker',blocked:false,action:'shaft',label:'О лифтовой шахте',target:'ЛИФТОВОЙ УЗЕЛ · ЭТАЖОМ НИЖЕ',approach:[21.5,20.5]});
  kiosk('scanner',22.6,33.5,1.1,{action:'scan',label:'Проверить допуск',target:'КОНТРОЛЬ ДОСТУПА',approach:[21.5,34.5]});

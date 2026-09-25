@@ -35,7 +35,14 @@ async function boot(saved){
  d.player.x=20.5;d.player.y=19.5;d.state.path=[];
  for(const [dx,dy,expected] of [[1,0,1],[0,1,2],[-1,0,3],[0,-1,0]]){assert(d.move(dx,dy,.02));assert.equal(d.player.facing,expected,'Sprite faces opposite to movement');}
  const payloads=[];api.onAction=(name,id)=>payloads.push([name,id]);
- for(const o of d.level.objects.filter(o=>o.action==='container')){d.player.x=o.approach[0];d.player.y=o.approach[1];d.state.selected=o;d.updateAction();d.act();assert.deepEqual(payloads.at(-1),['container',o.inventory],'Container does not open its own inventory');}
- console.log('PASS: character directions and container payloads.');
+ for(const o of d.level.objects.filter(o=>o.action==='container')){
+  d.player.x=o.approach[0];d.player.y=o.approach[1];d.state.selected=o;d.updateAction();const before=payloads.length;d.act();
+  if(d.state.container){
+   assert(api.isBusy());assert.equal(payloads.length,before,'Inventory must wait for the lid');frames(12);assert.equal(payloads.length,before);
+   d.act();frames(20);assert.equal(payloads.length,before+1,'Repeated taps must not duplicate dialogs');assert(d.state.open[o.id]);assert.equal(d.state.container.phase,'held');
+   assert.deepEqual(payloads.at(-1),['container',o.inventory]);api.closeContainer();assert(api.isBusy());frames(25);assert(!d.state.open[o.id]);assert.equal(d.state.container,null);
+  }else assert.deepEqual(payloads.at(-1),['container',o.inventory],'Container does not open its own inventory');
+ }
+ console.log('PASS: character directions, container opening before inventory, repeat-tap safety, closing and payloads.');
  console.log('PASS: one stair; all three classes; class required before admission; session class restore; both decon chambers; automatic closure in both directions; occupied-door safety; all approaches; 844×390 DPR3.');
 })().catch(e=>{console.error(e);process.exitCode=1});
