@@ -9,7 +9,7 @@ const fallbackFaq = [
   {id:'interval',question:'Как часто принимать дозу?',answer:'Полная доза нужна каждые 10 собственных игровых ходов. Выдача препарата не считается его приёмом.'},
   {id:'turn',question:'Что считается ходом?',answer:'Собственный игровой пост с действием, в том числе передвижением или отыгрышем реквеста. Обычные диалоги, спасброски, технические сообщения и дополнительные ответы не засчитываются.'},
   {id:'missed',question:'Что будет при пропуске приёма?',answer:'После первых 10 ходов без новой дозы: следующие ходы 1–3 — помеха, 4-й — мастер может изменить реквест, 5-й — полная передача управления мастеру. Полная доза возвращает контроль и сбрасывает счётчик.'},
-  {id:'access',question:'Как повысить доступ?',answer:'Стартовый доступ к системам — 1. Повышение требует отдельного тестирования у мастера. Уровень персонажа начинается с 0 и учитывается отдельно.'},
+  {id:'access',question:'Как повысить доступ?',answer:'Выберите службу и нужный уровень полномочий. Повышение квалификации проводится через тест; ссылка будет добавлена позже. Уровни разных служб учитываются отдельно. Ω не является пятым уровнем и не выдаётся штатным сотрудникам.'},
   {id:'materials',question:'Где найти материалы проекта?',answer:'Материалы проекта доступны на DOTD Dossier и в архиве Starfield. Действующие условия конкретной сцены уточняет мастер.'}
 ];
 let profile = {name:'Посетитель',character:'',degree:null,access_level:1};
@@ -36,6 +36,7 @@ function unlockAudio(){
 }
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 let issuanceKey = null, accessKey = null;
+let accessCatalog=null,selectedService=null;
 function freshKey(){return crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;}
 function haptic(type='light'){try {tg?.HapticFeedback?.impactOccurred(type);} catch {}}
 function play(name){
@@ -65,8 +66,7 @@ function sync(data){
   if(data.profile)profile=data.profile;
   if(data.events)events=data.events;
   $('character').value=profile.character||'';
-  $('access-level').textContent=String(profile.access_level).padStart(2,'0');
-  $('next-level').textContent=`До уровня ${profile.access_level+1}`;
+  if(data.accesses&&!accessCatalog){accessCatalog=data.accesses;renderAccesses();}
   renderHistory();renderFaq(data.faq||fallbackFaq);
 }
 function renderHistory(){
@@ -85,11 +85,9 @@ function renderHistory(){
 function renderFaq(items){
   const list=$('faq-list');list.replaceChildren();
   for(const item of items){
-    const details=document.createElement('details'),summary=document.createElement('summary'),p=document.createElement('p'),button=document.createElement('button');
+    const details=document.createElement('details'),summary=document.createElement('summary'),p=document.createElement('p');
     summary.textContent=item.question;p.textContent=item.answer;p.className='faq-answer';
-    button.type='button';button.className='secondary-button faq-send';button.textContent='Ответить в личном чате';button.disabled=!real;
-    button.addEventListener('click',async()=>{button.disabled=true;try{await api('faq',{id:item.id});button.textContent='Ответ отправляется в чат';play('confirm');}catch(e){showError(e.message);button.disabled=false;}});
-    details.append(summary,p,button);list.append(details);
+    details.append(summary,p);list.append(details);
   }
 }
 function drawScene(){
@@ -161,13 +159,23 @@ $('again-button').addEventListener('click',()=>{
   document.querySelectorAll('[data-degree]').forEach(b=>{b.classList.remove('selected');b.setAttribute('aria-pressed','false');});$('dispense-button').disabled=true;
 });
 async function requestAccess(target){
-  if(busy)return;busy=true;clearError();$('access-next').disabled=true;$('access-form').querySelector('button').disabled=true;
+  if(busy||!real)return;busy=true;clearError();document.querySelectorAll('[data-access-level]').forEach(b=>b.disabled=true);
   if(!accessKey)accessKey=freshKey();
-  try{const data=await api('access',{target,requestId:accessKey});sync(data);accessKey=null;$('access-result').textContent=`«Запрос зарегистрирован: ${target}. Для повышения допуска требуется отдельное тестирование у мастера». Сообщение отправляется в личный чат.`;$('access-result').hidden=false;play('confirm');haptic('medium');}
-  catch(e){showError(e.message);}finally{busy=false;$('access-next').disabled=!real;$('access-form').querySelector('button').disabled=!real;}
+  try{const data=await api('access',{target,requestId:accessKey});sync(data);accessKey=null;$('access-result').replaceChildren();const text=document.createElement('p');text.textContent=`«Выбран допуск ${target}. Повышение квалификации проводится через тест».`;$('access-result').append(text);
+    if(data.request.test_url){const link=document.createElement('a');link.href=data.request.test_url;link.target='_blank';link.rel='noopener noreferrer';link.textContent=`Пройти тест · ${target}`;$('access-result').append(link);}else{const note=document.createElement('p');note.textContent='Ссылка на тест для этого допуска будет добавлена позже.';$('access-result').append(note);}
+    $('access-result').hidden=false;play('confirm');haptic('medium');}
+  catch(e){showError(e.message);}finally{busy=false;document.querySelectorAll('[data-access-level]').forEach(b=>b.disabled=!real);}
 }
-$('access-next').addEventListener('click',()=>requestAccess(`Доступ к системам: уровень ${profile.access_level+1}`));
-$('access-form').addEventListener('submit',e=>{e.preventDefault();const target=$('access-target').value.trim();if(target)requestAccess(target);});
+function renderAccesses(){
+  if(!accessCatalog)return;const list=$('access-services');list.replaceChildren();
+  for(const service of accessCatalog.services){const button=document.createElement('button');button.type='button';button.className='service-button';const code=document.createElement('strong'),name=document.createElement('span');code.textContent=service.code;name.textContent=service.name;button.append(code,name);button.addEventListener('click',()=>selectService(service));list.append(button);}
+}
+function selectService(service){
+  selectedService=service;$('access-services').hidden=true;$('access-level-panel').hidden=false;$('access-result').hidden=true;$('access-code').textContent=service.code;$('service-description').textContent=service.description;accessKey=null;
+  const list=$('access-levels');list.replaceChildren();
+  for(const level of accessCatalog.levels.filter(item=>item.level>1)){const button=document.createElement('button');button.type='button';button.className='choice-button';button.dataset.accessLevel=String(level.level);button.disabled=!real;const title=document.createElement('span'),sub=document.createElement('small'),arrow=document.createElement('span');title.textContent=`${service.code}-${level.level}`;sub.textContent=level.name;arrow.textContent='→';arrow.setAttribute('aria-hidden','true');button.append(title,sub,arrow);button.addEventListener('click',()=>requestAccess(`${service.code}-${level.level}`));list.append(button);}play('click');haptic();
+}
+$('change-service').addEventListener('click',()=>{if(busy)return;selectedService=null;accessKey=null;$('access-services').hidden=false;$('access-level-panel').hidden=true;$('access-result').hidden=true;$('access-code').textContent='—';play('click');});
 $('profile-form').addEventListener('submit',async e=>{e.preventDefault();const button=e.currentTarget.querySelector('button');button.disabled=true;try{const data=await api('profile',{character:$('character').value});sync(data);$('profile-status').textContent='Имя персонажа сохранено.';play('confirm');}catch(error){showError(error.message);}finally{button.disabled=!real;}});
 async function loadSprites(){
   await Promise.all(Object.entries({case:'box-cut.png',opening:'boxOpening-cut.png',robot:'robotSprite-cut.png',floor:'floor-cut.png',vial:'mysterium.png'}).map(([key,file])=>new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>{sprites[key]=img;resolve();};img.onerror=()=>reject(new Error('Не удалось загрузить спрайты. Обновите терминал.'));img.src=`/assets/${file}`;})));
@@ -177,6 +185,7 @@ async function start(){
   updateSound();renderFaq(fallbackFaq);renderHistory();
   try{tg?.ready();tg?.expand();tg?.setHeaderColor('#141914');tg?.setBackgroundColor('#141914');if(tg?.isVersionAtLeast?.('7.10'))tg.setBottomBarColor('#141914');}catch{}
   try{await loadSprites();}catch(e){showError(e.message);}
+  try{accessCatalog=await(await fetch('/accesses.json')).json();renderAccesses();}catch{showError('Не удалось загрузить список служб. Обновите робота.');}
   if(real){
     try{
       const data=await api('state');sync(data);$('connection-label').textContent=`На связи · ${profile.character||profile.name}`;
@@ -186,7 +195,7 @@ async function start(){
     }catch(e){$('connection-label').textContent='Нет связи с контроллером';showError(e.message);}
   }else{
     $('connection-label').textContent='Просмотр терминала';$('demo-notice').hidden=false;
-    $('access-next').disabled=true;$('access-form').querySelector('button').disabled=true;$('profile-form').querySelector('button').disabled=true;
+    $('profile-form').querySelector('button').disabled=true;
   }
 }
 start();

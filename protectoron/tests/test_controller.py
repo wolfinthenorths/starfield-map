@@ -139,6 +139,57 @@ class ControllerTests(unittest.TestCase):
         with server.db() as con:
             self.assertEqual(len(server.state(con, 101)["events"]), 1)
 
+    def test_miniapp_actions_are_silent_and_keep_username_and_exact_time(self):
+        with server.db() as con:
+            server.upsert_profile(con, {"id": 101, "first_name": "Игрок", "username": "my_player"})
+            with patch.object(server.time, "time", return_value=1791835200):
+                server.issue(con, 101, 2, "silent-dose", notify=False)
+            server.access_request(con, 101, "MED-2", "silent-access", notify=False)
+            self.assertEqual(con.execute("SELECT COUNT(*) FROM outbox").fetchone()[0], 0)
+            payload = next(e["payload"] for e in server.state(con, 101)["events"] if e["kind"] == "dispense")
+            self.assertEqual(payload["telegram_username"], "@my_player")
+            self.assertEqual(payload["units"], 2)
+            self.assertEqual(payload["timezone"], "Asia/Tomsk")
+            self.assertRegex(payload["taken_at"], r"\d{2}\.\d{2}\.\d{4} \d{2}:\d{2}:\d{2}")
+
+    def test_username_missing_uses_id_instead_of_invented_username(self):
+        with server.db() as con:
+            result = server.issue(con, 101, 1, "anonymous-dose", notify=False)
+            self.assertEqual(result["telegram_username"], "ID:101")
+
+    def test_access_buttons_follow_archive_services_then_levels(self):
+        message = {"chat": {"id": 101, "type": "private"}, "from": {"id": 101}, "text": "/access"}
+        server.handle_update({"update_id": 50, "message": message})
+        with server.db() as con:
+            sent = json.loads(con.execute("SELECT payload FROM outbox ORDER BY id DESC LIMIT 1").fetchone()[0])
+            buttons = [b for row in sent["reply_markup"]["inline_keyboard"] for b in row]
+            services = [b for b in buttons if b["callback_data"].startswith("accessservice:")]
+            self.assertEqual(len(services), 12)
+            med = next(b for b in services if b["callback_data"].endswith(":MED"))
+        def click(update_id, data):
+            return {"update_id": update_id, "callback_query": {"id": str(update_id), "from": {"id": 101},
+                    "message": {"chat": {"id": 101, "type": "private"}}, "data": data}}
+        with patch.object(server, "telegram", return_value=True):
+            server.handle_update(click(51, med["callback_data"]))
+            with server.db() as con:
+                sent = json.loads(con.execute("SELECT payload FROM outbox ORDER BY id DESC LIMIT 1").fetchone()[0])
+                buttons = [row[0] for row in sent["reply_markup"]["inline_keyboard"][:3]]
+                self.assertEqual([b["text"].split(" · ")[0] for b in buttons], ["MED-2", "MED-3", "MED-4"])
+            server.handle_update(click(52, buttons[0]["callback_data"]))
+        with server.db() as con:
+            event = server.state(con, 101)["events"][0]
+            self.assertEqual(event["payload"]["target"], "MED-2")
+            message = json.loads(con.execute("SELECT payload FROM outbox ORDER BY id DESC LIMIT 1").fetchone()[0])
+            self.assertIn("Ссылка на испытание", message["text"])
+
+    def test_future_test_url_is_configurable_per_clearance(self):
+        with patch.object(server, "TEST_URLS", {"MED-2": "https://example.com/medical-test", "TEC-2": "javascript:alert(1)"}):
+            self.assertEqual(server.test_url("MED-2"), "https://example.com/medical-test")
+            self.assertEqual(server.test_url("TEC-2"), "")
+            with server.db() as con:
+                result = server.access_request(con, 101, "MED-2", "test-link")
+                self.assertEqual(result["test_url"], "https://example.com/medical-test")
+
 
 if __name__ == "__main__":
     unittest.main()

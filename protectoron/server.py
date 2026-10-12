@@ -19,6 +19,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 PUBLIC = ROOT / "public"
+ACCESS_CATALOG = json.loads((PUBLIC / "accesses.json").read_text())
+ACCESS_SERVICES = {item["code"]: item for item in ACCESS_CATALOG["services"]}
+TEST_URLS = json.loads(os.environ.get("QUALIFICATION_TEST_URLS", "{}"))
 TOKEN = os.environ.get("BOT_TOKEN", "")
 APP_URL = os.environ.get("APP_URL", "").rstrip("/")
 DATA_DIR = Path(os.environ.get("DATA_DIR", str(ROOT / "local-data")))
@@ -30,7 +33,7 @@ FAQ = [
     {"id": "interval", "question": "Как часто принимать дозу?", "answer": "Полная доза нужна каждые 10 собственных игровых ходов. Получение препарата не считается его приёмом. Отыгрыш приёма остаётся за игроком."},
     {"id": "turn", "question": "Что считается ходом?", "answer": "Засчитывается собственный игровой пост с действием, в том числе передвижением или отыгрышем реквеста. Обычные диалоги, спасброски, технические сообщения и дополнительные ответы не засчитываются."},
     {"id": "missed", "question": "Что будет при пропуске приёма?", "answer": "После первых 10 ходов без новой дозы: на следующих ходах 1–3 действует помеха, на 4-м мастер может изменить реквест, на 5-м управление полностью передаётся мастеру. Полная доза возвращает контроль и сбрасывает счётчик."},
-    {"id": "access", "question": "Как повысить доступ?", "answer": "Стартовый доступ к системам — 1. Повышение требует отдельного тестирования. Уровень персонажа начинается с 0 и учитывается отдельно. Кнопка обращения к контроллеру регистрирует запрос на испытание; сама заявка доступ не повышает."},
+    {"id": "access", "question": "Как повысить доступ?", "answer": "Выберите службу и нужный уровень её полномочий. Повышение квалификации проводится через тест; ссылка будет добавлена позже. Уровни разных служб учитываются отдельно: 1 — вспомогательный, 2 — рабочий, 3 — расширенный, 4 — критический. Уровень персонажа и номер этажа не обозначают служебный допуск. Ω не является пятым уровнем и не выдаётся штатным сотрудникам."},
     {"id": "materials", "question": "Где найти материалы проекта?", "answer": "Материалы проекта доступны на DOTD Dossier и в архиве Starfield. Действующие условия конкретной сцены уточняет мастер."},
 ]
 
@@ -71,6 +74,9 @@ def init_db():
             payload TEXT NOT NULL, delivered INTEGER NOT NULL DEFAULT 0,
             attempts INTEGER NOT NULL DEFAULT 0, next_attempt INTEGER NOT NULL DEFAULT 0);
         """)
+        columns = {row[1] for row in con.execute("PRAGMA table_info(profiles)")}
+        if "username" not in columns:
+            con.execute("ALTER TABLE profiles ADD COLUMN username TEXT NOT NULL DEFAULT ''")
 
 
 def telegram(method, payload):
@@ -116,9 +122,10 @@ def validate_init_data(raw, token=None, now=None):
 
 def upsert_profile(con, user):
     name = str(user.get("first_name", "Посетитель"))[:80]
-    con.execute("INSERT INTO profiles(user_id,name,updated_at) VALUES(?,?,?) "
-                "ON CONFLICT(user_id) DO UPDATE SET name=excluded.name,updated_at=excluded.updated_at",
-                (user["id"], name, int(time.time())))
+    username = str(user.get("username", ""))[:64]
+    con.execute("INSERT INTO profiles(user_id,name,username,updated_at) VALUES(?,?,?,?) "
+                "ON CONFLICT(user_id) DO UPDATE SET name=excluded.name,username=excluded.username,updated_at=excluded.updated_at",
+                (user["id"], name, username, int(time.time())))
 
 
 def state(con, user_id):
@@ -137,7 +144,7 @@ def cb(label, value):
     return {"text": label, "callback_data": value}
 
 
-def app_button(label="Открыть терминал", query=""):
+def app_button(label="Открыть робота", query=""):
     return {"text": label, "web_app": {"url": APP_URL + "/" + query}}
 
 
@@ -173,7 +180,7 @@ def consume_prompt(con, key, user_id, kind):
     return True
 
 
-def issue(con, user_id, degree, key):
+def issue(con, user_id, degree, key, notify=True):
     if type(degree) is not int or degree not in ROMAN:
         raise ValueError("Выберите степень I, II или III.")
     old = con.execute("SELECT id,payload,created_at FROM events WHERE user_id=? AND kind='dispense' AND request_key=?",
@@ -182,7 +189,10 @@ def issue(con, user_id, degree, key):
         return {"id": old["id"], **json.loads(old["payload"]), "created_at": old["created_at"], "repeated": True}
     profile = con.execute("SELECT * FROM profiles WHERE user_id=?", (user_id,)).fetchone()
     event_id, now = uuid.uuid4().hex, int(time.time())
-    payload = {"degree": degree, "units": degree}
+    username = "@" + profile["username"] if profile["username"] else f"ID:{user_id}"
+    payload = {"degree": degree, "units": degree, "telegram_username": username,
+               "taken_at": time.strftime("%d.%m.%Y %H:%M:%S", time.gmtime(now + 7 * 3600)),
+               "timezone": "Asia/Tomsk"}
     con.execute("INSERT INTO events VALUES(?,?,?,?,?,?)", (event_id, user_id, "dispense", json.dumps(payload), now, key))
     con.execute("UPDATE profiles SET degree=?,updated_at=? WHERE user_id=?", (degree, now, user_id))
     who = html.escape(profile["character"] or profile["name"])
@@ -197,26 +207,38 @@ def issue(con, user_id, degree, key):
     rows = [[cb("Инструкция по приёму", "faq:interval")], [cb("Вернуться к контроллеру", "home")]]
     if APP_URL:
         rows.insert(0, [app_button("Посмотреть выдачу", f"?receipt={event_id}")])
-    queue(con, user_id, text, keyboard(rows))
+    if notify:
+        queue(con, user_id, text, keyboard(rows))
     return {"id": event_id, **payload, "created_at": now, "repeated": False}
 
 
-def access_request(con, user_id, target, key):
+def test_url(target):
+    value = TEST_URLS.get(target, "")
+    return value if isinstance(value, str) and value.startswith("https://") else ""
+
+
+def access_request(con, user_id, target, key, notify=True):
     target = str(target).strip()
     if not target or len(target) > 120:
         raise ValueError("Укажите нужный доступ: до 120 символов.")
     old = con.execute("SELECT id FROM events WHERE user_id=? AND kind='access' AND request_key=?", (user_id, key)).fetchone()
     if old:
-        return {"id": old["id"], "target": target, "repeated": True}
+        return {"id": old["id"], "target": target, "repeated": True, "test_url": test_url(target)}
     event_id = uuid.uuid4().hex
     con.execute("INSERT INTO events VALUES(?,?,?,?,?,?)", (event_id, user_id, "access",
                 json.dumps({"target": target, "status": "awaiting_testing"}, ensure_ascii=False), int(time.time()), key))
-    queue(con, user_id,
+    url = test_url(target)
+    test_note = "«Для повышения квалификации пройдите тест по ссылке ниже»." if url else "«Повышение квалификации проводится через тест. Ссылка на испытание для этого допуска будет добавлена позже»."
+    rows = [[cb("Как проходит повышение?", "faq:access")], [cb("Вернуться", "home")]]
+    if url:
+        rows.insert(0, [{"text": f"Пройти тест · {target}", "url": url}])
+    if notify:
+        queue(con, user_id,
           "Протектрон поворачивает оптический модуль к терминалу; на дисплее загорается строка нового обращения. "
-          f"«Запрос зарегистрирован: <b>{html.escape(target)}</b>. Повышение допуска требует отдельного тестирования. "
-          "Для проведения испытания обратитесь к мастеру».\n\nЗаявка сохранена в вашем журнале. Текущий допуск остаётся прежним.",
-          keyboard([[cb("Как проходит повышение?", "faq:access")], [cb("Вернуться", "home")]]))
-    return {"id": event_id, "target": target, "repeated": False}
+          f"«Запрос зарегистрирован: <b>{html.escape(target)}</b>». "
+          f"{test_note}\n\nОбращение сохранено в вашем журнале. Выбор кнопки сам по себе допуск не повышает.",
+          keyboard(rows))
+    return {"id": event_id, "target": target, "repeated": False, "test_url": url}
 
 
 def handle_update(update):
@@ -265,26 +287,33 @@ def handle_update(update):
                 queue(con, user_id, "«Этот запрос уже обработан либо устарел. Для новой выдачи начните обращение заново».",
                       keyboard([[cb("Получить мистериум", "mysterium")], [cb("Вернуться", "home")]]))
         elif text.startswith("/access") or data == "access":
-            prompt = new_prompt(con, user_id, "access")
-            profile = con.execute("SELECT access_level FROM profiles WHERE user_id=?", (user_id,)).fetchone()
-            target = profile["access_level"] + 1
+            prompt = new_prompt(con, user_id, "access-service")
+            choices = [cb(f"{item['code']} · {item['name']}", f"accessservice:{prompt}:{item['code']}") for item in ACCESS_CATALOG["services"]]
             queue(con, user_id, "На панели Протектрона загорается индикатор допуска. «Уточните, какой именно доступ "
-                  "вам требуется повысить».\n\n<b>Выберите цель обращения:</b>",
-                  keyboard([[cb(f"К системам · до уровня {target}", f"accessnext:{prompt}")],
-                            [cb("Указать другой доступ", f"accesscustom:{prompt}")], [cb("Вернуться", "home")]]))
-        elif data.startswith("accessnext:"):
-            key = data.split(":", 1)[1]
-            if consume_prompt(con, key, user_id, "access"):
-                level = con.execute("SELECT access_level FROM profiles WHERE user_id=?", (user_id,)).fetchone()[0] + 1
-                access_request(con, user_id, f"Доступ к системам: уровень {level}", f"bot:{key}")
-            else:
-                queue(con, user_id, "«Обращение уже зарегистрировано либо устарело».", home_keyboard())
-        elif data.startswith("accesscustom:"):
-            key = data.split(":", 1)[1]
-            if consume_prompt(con, key, user_id, "access"):
-                con.execute("UPDATE profiles SET pending='access' WHERE user_id=?", (user_id,))
-                queue(con, user_id, "«Назовите систему или нужный уровень допуска». Отправьте название следующим сообщением.",
-                      {"force_reply": True, "input_field_placeholder": "Какой доступ требуется?"})
+                  "вам требуется повысить».\n\n<b>Выберите службу:</b>",
+                  keyboard([choices[i:i + 2] for i in range(0, len(choices), 2)] + [[cb("Вернуться", "home")]]))
+        elif data.startswith("accessservice:"):
+            try:
+                _, key, service = data.split(":")
+                if service not in ACCESS_SERVICES or not consume_prompt(con, key, user_id, "access-service"):
+                    raise ValueError()
+                prompt = new_prompt(con, user_id, "access-level:" + service)
+                item = ACCESS_SERVICES[service]
+                queue(con, user_id, f"«Служба {service}: {html.escape(item['description'])} Укажите нужный уровень полномочий».\n\n"
+                      "Уровень относится к выбранной службе и не обозначает этаж убежища.",
+                      keyboard([[cb(f"{service}-{level['level']} · {level['name']}", f"accesslevel:{prompt}:{service}:{level['level']}")]
+                                for level in ACCESS_CATALOG["levels"] if level["level"] > 1] + [[cb("Выбрать другую службу", "access")]]))
+            except ValueError:
+                queue(con, user_id, "«Выберите службу заново».", keyboard([[cb("Выбрать службу", "access")]]))
+        elif data.startswith("accesslevel:"):
+            try:
+                _, key, service, value = data.split(":")
+                level = int(value)
+                if service not in ACCESS_SERVICES or level not in (2, 3, 4) or not consume_prompt(con, key, user_id, "access-level:" + service):
+                    raise ValueError()
+                access_request(con, user_id, f"{service}-{level}", f"bot:{key}")
+            except ValueError:
+                queue(con, user_id, "«Этот запрос уже обработан либо устарел».", keyboard([[cb("Выбрать службу", "access")]]))
         elif data == "character":
             con.execute("UPDATE profiles SET pending='character' WHERE user_id=?", (user_id,))
             queue(con, user_id, "«Назовите персонажа, для которого оформляется обращение». Отправьте имя следующим сообщением.",
@@ -317,12 +346,6 @@ def handle_update(update):
                     queue(con, user_id, f"«Имя персонажа зафиксировано: {html.escape(text)}». Чем могу помочь?", home_keyboard())
                 else:
                     queue(con, user_id, "«Укажите имя длиной до 80 символов».")
-            elif profile["pending"] == "access":
-                if len(text) <= 120 and not text.startswith("/"):
-                    access_request(con, user_id, text, f"update:{update['update_id']}")
-                    con.execute("UPDATE profiles SET pending='' WHERE user_id=?", (user_id,))
-                else:
-                    queue(con, user_id, "«Укажите название доступа длиной до 120 символов».")
             else:
                 # Curated answers: no model and no invented lore.
                 lowered = text.lower()
@@ -372,7 +395,7 @@ def setup_bot():
                 {"command": "history", "description": "Журнал обращений"}]})
             telegram("setMyDescription", {"description": "Протектрон-контроллер Starfield. Выдача мистериума по степени гулификации, запросы на повышение доступа и справочный модуль. Обслуживание в личном чате."})
             telegram("setMyShortDescription", {"short_description": "Контроллер Starfield · мистериум, доступы и справочный модуль"})
-            telegram("setChatMenuButton", {"menu_button": {"type": "web_app", "text": "Терминал", "web_app": {"url": APP_URL + "/"}}})
+            telegram("setChatMenuButton", {"menu_button": {"type": "web_app", "text": "Робот", "web_app": {"url": APP_URL + "/"}}})
             telegram("setWebhook", {"url": APP_URL + "/telegram/webhook", "secret_token": WEBHOOK_SECRET,
                                     "allowed_updates": ["message", "callback_query"], "max_connections": 4})
             print("Controller ready: @" + me["username"], flush=True)
@@ -444,13 +467,17 @@ class Handler(BaseHTTPRequestHandler):
                     key = str(body.get("requestId", ""))
                     if not 8 <= len(key) <= 100:
                         raise ValueError("Недопустимый номер обращения")
-                    receipt = issue(con, user["id"], body.get("degree"), "app:" + key)
+                    receipt = issue(con, user["id"], body.get("degree"), "app:" + key, notify=False)
                     result = {"receipt": receipt, **state(con, user["id"])}
                 elif path == "/api/access":
                     key = str(body.get("requestId", ""))
                     if not 8 <= len(key) <= 100:
                         raise ValueError("Недопустимый номер обращения")
-                    request = access_request(con, user["id"], body.get("target", ""), "app:" + key)
+                    target = str(body.get("target", ""))
+                    parts = target.split("-")
+                    if len(parts) != 2 or parts[0] not in ACCESS_SERVICES or parts[1] not in ("2", "3", "4"):
+                        raise ValueError("Выберите службу и уровень кнопками")
+                    request = access_request(con, user["id"], target, "app:" + key, notify=False)
                     result = {"request": request, **state(con, user["id"])}
                 elif path == "/api/profile":
                     character = str(body.get("character", "")).strip()
@@ -462,14 +489,14 @@ class Handler(BaseHTTPRequestHandler):
                     item = next((f for f in FAQ if f["id"] == body.get("id")), None)
                     if not item:
                         raise ValueError("Вопрос не найден")
-                    queue(con, user["id"], f"<b>{html.escape(item['question'])}</b>\n\n«{html.escape(item['answer'])}»", home_keyboard())
-                    result = {"ok": True}
+                    result = {"ok": True, "answer": item["answer"]}
                 else:
                     result = state(con, user["id"])
                 result["faq"] = FAQ
+                result["accesses"] = ACCESS_CATALOG
             self.reply(200, result)
         except (ValueError, KeyError, TypeError, json.JSONDecodeError):
-            self.reply(400, {"error": "Не удалось обработать запрос. Откройте терминал заново из личного чата с ботом."})
+            self.reply(400, {"error": "Не удалось обработать запрос. Откройте робота заново из личного чата с ботом."})
         except Exception as exc:
             print("Request:", type(exc).__name__, flush=True)
             self.reply(503, {"error": "Контроллер временно недоступен. Повторите обращение чуть позже."})
