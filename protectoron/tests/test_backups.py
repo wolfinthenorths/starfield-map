@@ -100,6 +100,22 @@ class BackupTests(unittest.TestCase):
         for thread in threads: thread.join()
         self.assertEqual(len(results), 3)
         for result in results: self.assertEqual(verify_snapshot(result['local_path'])['events'], 1)
+    def test_railway_address_style_maps_to_sdk_value(self):
+        import sys
+        from types import SimpleNamespace
+        captured = {}
+        def config(**kwargs):
+            captured.update(kwargs)
+            return kwargs
+        modules = {'boto3': SimpleNamespace(client=lambda *args, **kwargs: object()),
+                   'botocore.config': SimpleNamespace(Config=config)}
+        manager = Backups(self.directory, bucket='private-bucket')
+        with patch.dict(sys.modules, modules), patch.dict('os.environ', {
+            'BACKUP_S3_ENDPOINT': 'https://storage.invalid', 'BACKUP_S3_ACCESS_KEY_ID': 'test',
+            'BACKUP_S3_SECRET_ACCESS_KEY': 'test', 'BACKUP_S3_URL_STYLE': 'virtual-host'}):
+            manager.s3()
+        self.assertEqual(captured['s3']['addressing_style'], 'virtual')
+
     def test_missing_source_never_creates_empty_database(self):
         (self.directory/'protectoron.sqlite3').unlink()
         with self.assertRaises(Exception): self.manager.run()

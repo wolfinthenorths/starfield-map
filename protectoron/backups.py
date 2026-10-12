@@ -63,7 +63,7 @@ class Backups:
                 aws_access_key_id=os.environ['BACKUP_S3_ACCESS_KEY_ID'],
                 aws_secret_access_key=os.environ['BACKUP_S3_SECRET_ACCESS_KEY'],
                 config=Config(signature_version='s3v4', connect_timeout=10, read_timeout=30,
-                    retries={'max_attempts': 2}, s3={'addressing_style': os.environ.get('BACKUP_S3_URL_STYLE', 'path')},
+                    retries={'max_attempts': 2}, s3={'addressing_style': {'virtual-host': 'virtual'}.get(os.environ.get('BACKUP_S3_URL_STYLE', 'path'), os.environ.get('BACKUP_S3_URL_STYLE', 'path'))},
                     request_checksum_calculation='when_required', response_checksum_validation='when_required'))
         return self.client
 
