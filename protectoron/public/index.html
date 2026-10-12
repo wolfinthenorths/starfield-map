@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#141914">
+  <title>Протектрон · Starfield</title>
+  <link rel="icon" href="/assets/mysterium.png" type="image/png">
+  <link rel="stylesheet" href="/style.css">
+  <script src="https://telegram.org/js/telegram-web-app.js" defer></script>
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <main class="terminal">
+    <header class="masthead">
+      <div><span class="eyebrow">STARFIELD / СЛУЖБА КОНТРОЛЯ</span><div class="brand">ПРОТЕКТРОН<span class="serial">PR–01</span></div></div>
+      <button id="sound" class="sound-button" type="button" aria-pressed="false" aria-label="Включить звук">ЗВУК: ВЫКЛ.</button>
+    </header>
+    <div class="connection"><span class="led"></span><span id="connection-label">Подключение к контроллеру…</span><span class="connection-code">ЛИЧНОЕ ОБСЛУЖИВАНИЕ</span></div>
+    <nav class="tabs" aria-label="Разделы терминала">
+      <button data-tab="dispense" class="active" aria-current="page">Выдача</button>
+      <button data-tab="access">Доступ</button>
+      <button data-tab="faq">Справочник</button>
+      <button data-tab="history">Журнал</button>
+    </nav>
+
+    <section id="dispense" class="view active" aria-labelledby="dispense-title">
+      <div class="section-heading"><div><p class="eyebrow">МЕДИЦИНСКОЕ ОБСЛУЖИВАНИЕ</p><h1 id="dispense-title">Мистериум</h1></div><span class="small-tag">КАССЕТА / 001</span></div>
+      <div class="scene-shell">
+        <div class="scene-label"><span>ОТСЕК ВЫДАЧИ</span><span id="scene-state">ЗАМОК ЗАКРЫТ</span></div>
+        <canvas id="scene" width="640" height="320" role="img" aria-label="Робот-контроллер рядом с закрытым контейнером мистериума"></canvas>
+        <div class="scene-foot"><span id="scene-hint">Ожидание обращения</span><span class="scene-coordinate">M–84 / MED</span></div>
+      </div>
+      <div class="speech"><img src="/assets/robotSprite-cut.png" alt="" class="robot-avatar"><div><span class="eyebrow">КОНТРОЛЛЕР</span><p id="robot-speech" aria-live="polite">«Для подготовки индивидуальной дозы укажите степень гулификации вашего персонажа».</p></div></div>
+      <div id="degree-panel" class="degree-panel">
+        <div class="field-heading"><label>Степень гулификации</label><span>ПОЛНАЯ ДОЗА</span></div>
+        <div class="degrees" role="group" aria-label="Степень гулификации">
+          <button data-degree="1" type="button" aria-pressed="false"><strong>I</strong><span>1 единица</span></button>
+          <button data-degree="2" type="button" aria-pressed="false"><strong>II</strong><span>2 единицы</span></button>
+          <button data-degree="3" type="button" aria-pressed="false"><strong>III</strong><span>3 единицы</span></button>
+        </div>
+        <button id="dispense-button" class="primary-button" disabled type="button"><span>Получить мистериум</span><span aria-hidden="true">→</span></button>
+        <p class="fine-print">После выбора контейнер откроется, а контроллер пришлёт отыгрыш выдачи в личный чат.</p>
+      </div>
+      <div id="receipt-panel" class="receipt-panel" hidden>
+        <img src="/assets/mysterium.png" alt="Флакон мистериума">
+        <div><span class="eyebrow">ВЫДАЧА ЗАФИКСИРОВАНА</span><h2 id="receipt-dose">Полная доза</h2><p>Сообщение контроллера отправляется в ваш личный чат.</p></div>
+        <button id="again-button" class="secondary-button" type="button">Новое обращение</button>
+      </div>
+      <p class="notice">Получение препарата и его приём — отдельные действия. Действия вашего персонажа вы отыгрываете самостоятельно.</p>
+    </section>
+
+    <section id="access" class="view" aria-labelledby="access-title">
+      <div class="section-heading"><div><p class="eyebrow">СИСТЕМЫ УБЕЖИЩА</p><h1 id="access-title">Повышение доступа</h1></div></div>
+      <div class="access-card"><img src="/assets/terminal-cut.png" alt="Терминал допуска"><div><span class="eyebrow">ТЕКУЩИЙ ДОПУСК К СИСТЕМАМ</span><strong id="access-level">01</strong><p>Повышение требует отдельного тестирования.</p></div></div>
+      <div class="speech"><img src="/assets/robotSprite-cut.png" alt="" class="robot-avatar"><div><span class="eyebrow">КОНТРОЛЛЕР</span><p>«Уточните, какой именно доступ вам требуется повысить».</p></div></div>
+      <button id="access-next" class="choice-button" type="button"><span>К системам убежища</span><small id="next-level">До уровня 2</small><span aria-hidden="true">→</span></button>
+      <form id="access-form"><label for="access-target">Другой доступ</label><div class="input-row"><input id="access-target" maxlength="120" placeholder="Название системы или нужный уровень" required><button class="secondary-button" type="submit">Указать</button></div></form>
+      <div id="access-result" class="inline-result" aria-live="polite" hidden></div>
+      <p class="notice">Контроллер сохраняет обращение. Для проведения испытания обратитесь к мастеру. Само обращение не повышает допуск.</p>
+    </section>
+
+    <section id="faq" class="view" aria-labelledby="faq-title">
+      <div class="section-heading"><div><p class="eyebrow">СПРАВОЧНЫЙ МОДУЛЬ</p><h1 id="faq-title">Чем могу помочь?</h1></div></div>
+      <p class="section-intro">Ответы контроллера на частые вопросы.</p>
+      <div id="faq-list" class="faq-list"></div>
+      <div class="links-panel"><span class="eyebrow">МАТЕРИАЛЫ ПРОЕКТА</span><a href="https://dotdossier.com/" target="_blank" rel="noopener noreferrer">DOTD Dossier <span aria-hidden="true">↗</span></a><a href="https://starfield-archive.netlify.app/" target="_blank" rel="noopener noreferrer">Архив Starfield <span aria-hidden="true">↗</span></a></div>
+    </section>
+
+    <section id="history" class="view" aria-labelledby="history-title">
+      <div class="section-heading"><div><p class="eyebrow">ЛИЧНЫЕ ЗАПИСИ</p><h1 id="history-title">Журнал обращений</h1></div></div>
+      <form id="profile-form" class="profile-card"><label for="character">Имя персонажа</label><div class="input-row"><input id="character" maxlength="80" placeholder="Как к вам обращаться?" autocomplete="off"><button class="secondary-button" type="submit">Сохранить</button></div><p id="profile-status" class="fine-print" aria-live="polite">Имя используется в репликах контроллера.</p></form>
+      <div id="history-list" class="history-list"><p class="empty-state">Обращений пока нет.</p></div>
+    </section>
+    <div id="error" class="error" role="alert" hidden></div>
+    <div id="demo-notice" class="demo-notice" hidden>Вы просматриваете терминал вне Telegram. Выдача доступна в личном чате с <a href="https://t.me/ptotectoronbot">@ptotectoronbot</a>.</div>
+    <footer><span>VAULT–TEC / STARFIELD</span><span>КОНТРОЛЛЕР НА СВЯЗИ</span></footer>
+  </main>
+</body>
+</html>

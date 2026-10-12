@@ -1,0 +1,6 @@
+__pycache__
+local-data
+tests
+*.sqlite3*
+*.log
+.env*
