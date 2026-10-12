@@ -20,11 +20,30 @@ const canvas = $('scene'), ctx = canvas.getContext('2d');
 const sprites = {};
 const sounds = Object.fromEntries(['click','box-open','box-close','confirm','robot','denied'].map(name => [name,new Audio(`/assets/audio/${name}.mp3`)]));
 Object.values(sounds).forEach(audio => {audio.preload='auto';audio.volume=.22;});
+let audioContext=null,audioLoading=null;
+const audioBuffers={};
+function unlockAudio(){
+  if(!sound)return Promise.resolve();
+  const AudioContext=window.AudioContext||window.webkitAudioContext;
+  if(!AudioContext)return Promise.resolve();
+  if(!audioContext)audioContext=new AudioContext();
+  // Resume synchronously from a tap; decoded existing MP3s remain playable after API responses on iOS.
+  const resumed=audioContext.resume().catch(()=>{});
+  if(!audioLoading)audioLoading=Promise.all(Object.keys(sounds).map(async name=>{
+    try{const response=await fetch(`/assets/audio/${name}.mp3`);audioBuffers[name]=await audioContext.decodeAudioData(await response.arrayBuffer());}catch{}
+  }));
+  return Promise.all([resumed,audioLoading]);
+}
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 let issuanceKey = null, accessKey = null;
 function freshKey(){return crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;}
 function haptic(type='light'){try {tg?.HapticFeedback?.impactOccurred(type);} catch {}}
-function play(name){if(!sound)return;const a=sounds[name];if(!a)return;a.currentTime=0;a.play().catch(()=>{});}
+function play(name){
+  if(!sound)return;
+  unlockAudio();
+  if(audioContext?.state==='running'&&audioBuffers[name]){const source=audioContext.createBufferSource(),gain=audioContext.createGain();source.buffer=audioBuffers[name];gain.gain.value=.22;source.connect(gain);gain.connect(audioContext.destination);source.start();return;}
+  const a=sounds[name];if(!a)return;a.currentTime=0;a.play().catch(()=>{});
+}
 function updateSound(){ $('sound').setAttribute('aria-pressed',String(sound));$('sound').textContent=`ЗВУК: ${sound?'ВКЛ.':'ВЫКЛ.'}`; }
 function showError(text){$('error').textContent=text;$('error').hidden=false;play('denied');}
 function clearError(){$('error').hidden=true;}
@@ -124,9 +143,11 @@ function selectDegree(value){
 }
 document.querySelectorAll('[data-tab]').forEach(button=>button.addEventListener('click',()=>setTab(button.dataset.tab)));
 document.querySelectorAll('[data-degree]').forEach(button=>button.addEventListener('click',()=>{if(!busy)selectDegree(Number(button.dataset.degree));}));
-$('sound').addEventListener('click',()=>{sound=!sound;try{localStorage.setItem('protectoron-sound',sound?'on':'off');}catch{}updateSound();if(sound)play('robot');});
+$('sound').addEventListener('click',()=>{sound=!sound;try{localStorage.setItem('protectoron-sound',sound?'on':'off');}catch{}updateSound();if(sound)unlockAudio().then(()=>play('robot'));});
+document.addEventListener('pointerdown',()=>{if(sound)unlockAudio();},{passive:true});
 $('dispense-button').addEventListener('click',async()=>{
   if(busy||!degree)return;busy=true;clearError();$('dispense-button').disabled=true;document.querySelectorAll('[data-degree]').forEach(b=>b.disabled=true);
+  play('click');
   $('dispense-button').firstElementChild.textContent='Обработка обращения…';
   if(!issuanceKey)issuanceKey=freshKey();
   try{
