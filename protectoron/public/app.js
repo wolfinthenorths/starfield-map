@@ -74,7 +74,7 @@ function renderHistory(){
   if(!events.length){const p=document.createElement('p');p.className='empty-state';p.textContent='Обращений пока нет. Выдачи и запросы на доступ появятся здесь.';list.append(p);return;}
   for(const event of events){
     const el=document.createElement('article');el.className='history-entry';
-    const img=document.createElement('img');img.src=event.kind==='dispense'?'/assets/mysterium.png':'/assets/terminal-cut.png';img.alt='';
+    const img=document.createElement('img');img.src=event.kind==='dispense'?'/assets/mysterium.webp':'/assets/terminal-cut.png';img.alt='';
     const body=document.createElement('div'),title=document.createElement('strong'),desc=document.createElement('p'),date=document.createElement('time');
     title.textContent=event.kind==='dispense'?'Выдача мистериума':'Запрос на повышение доступа';
     desc.textContent=event.kind==='dispense'?`${roman[event.payload.degree]} степень · ${event.payload.units} ${event.payload.units===1?'единица':'единицы'} · полная доза`:`${event.payload.target} · ожидает тестирования`;
@@ -112,7 +112,8 @@ function drawScene(){
   }
   if(opened&&sprites.vial){
     const count=degree||1;
-    for(let i=0;i<count;i++)ctx.drawImage(sprites.vial,367+(i-(count-1)/2)*24,185,48,48);
+    const height=76,width=Math.round(height*sprites.vial.width/sprites.vial.height);
+    for(let i=0;i<count;i++)ctx.drawImage(sprites.vial,393-width/2+(i-(count-1)/2)*29,164,width,height);
   }
 }
 async function animateOpen(){
@@ -178,7 +179,7 @@ function selectService(service){
 $('change-service').addEventListener('click',()=>{if(busy)return;selectedService=null;accessKey=null;$('access-services').hidden=false;$('access-level-panel').hidden=true;$('access-result').hidden=true;$('access-code').textContent='—';play('click');});
 $('profile-form').addEventListener('submit',async e=>{e.preventDefault();const button=e.currentTarget.querySelector('button');button.disabled=true;try{const data=await api('profile',{character:$('character').value});sync(data);$('profile-status').textContent='Имя персонажа сохранено.';play('confirm');}catch(error){showError(error.message);}finally{button.disabled=!real;}});
 async function loadSprites(){
-  await Promise.all(Object.entries({case:'box-cut.png',opening:'boxOpening-cut.png',robot:'robotSprite-cut.png',floor:'floor-cut.png',vial:'mysterium.png'}).map(([key,file])=>new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>{sprites[key]=img;resolve();};img.onerror=()=>reject(new Error('Не удалось загрузить спрайты. Обновите терминал.'));img.src=`/assets/${file}`;})));
+  await Promise.all(Object.entries({case:'box-cut.png',opening:'boxOpening-cut.png',robot:'robotSprite-cut.png',floor:'floor-cut.png',vial:'mysterium.webp'}).map(([key,file])=>new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>{sprites[key]=img;resolve();};img.onerror=()=>reject(new Error('Не удалось загрузить спрайты. Обновите терминал.'));img.src=`/assets/${file}`;})));
   drawScene();
 }
 async function start(){
