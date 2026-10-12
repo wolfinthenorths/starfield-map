@@ -78,8 +78,8 @@ function sync(data){
     $('own-name').textContent=ownCharacter.name;
     $('own-details').textContent=ownCharacter.class+(ownCharacter.degree?` · ${roman[ownCharacter.degree]} степень гулификации`:'');
     $('own-dose-note').textContent=ownCharacter.eligible?`Полная доза по реестру: ${ownCharacter.degree} ${ownCharacter.degree===1?'единица':'единицы'}.`:'Личная выдача мистериума для вашего класса недоступна. Для товарища можно подать рапорт.';
-    $('dispense-button').disabled=busy||!real||!ownCharacter.eligible;
-    $('companion-open').disabled=!real||busy||!gmConnected;
+    $('dispense-button').disabled=!real||!ownCharacter.eligible;
+    $('companion-open').disabled=!real||!gmConnected;
     if(!opened)$('robot-speech').textContent=`«${ownCharacter.name}. Данные реестра проверены. Укажите цель обращения».`;
   }
   const registration=requests.find(item=>item.kind==='registration'&&item.status==='pending');
