@@ -1,5 +1,7 @@
 """Private Telegram NPC and its sprite-based Mini App. No third-party runtime deps."""
 import hashlib
+import csv
+import io
 import hmac
 import html
 import json
@@ -25,6 +27,7 @@ TEST_URLS = json.loads(os.environ.get("QUALIFICATION_TEST_URLS", "{}"))
 TOKEN = os.environ.get("BOT_TOKEN", "")
 APP_URL = os.environ.get("APP_URL", "").rstrip("/")
 DATA_DIR = Path(os.environ.get("DATA_DIR", str(ROOT / "local-data")))
+JOURNAL_TOKEN = os.environ.get("JOURNAL_TOKEN", "")
 WEBHOOK_SECRET = hmac.new(TOKEN.encode(), b"protectoron-webhook", hashlib.sha256).hexdigest()
 STOP = threading.Event()
 ROMAN = {1: "I", 2: "II", 3: "III"}
@@ -134,6 +137,20 @@ def state(con, user_id):
                        "ORDER BY created_at DESC,rowid DESC LIMIT 20", (user_id,)).fetchall()
     return {"profile": {k: profile[k] for k in ("name", "character", "degree", "access_level")},
             "events": [{**dict(row), "payload": json.loads(row["payload"])} for row in rows]}
+
+
+def dose_journal_csv(con):
+    stream = io.StringIO(newline="")
+    writer = csv.writer(stream)
+    writer.writerow(["Юзернейм в Telegram", "Доза мистериума", "Дата и время (Томск)"])
+    for row in con.execute("SELECT user_id,payload,created_at FROM events WHERE kind='dispense' ORDER BY created_at,rowid"):
+        payload = json.loads(row["payload"])
+        username = payload.get("telegram_username") or f"ID:{row['user_id']}"
+        taken_at = payload.get("taken_at") or time.strftime("%d.%m.%Y %H:%M:%S", time.gmtime(row["created_at"] + 7 * 3600))
+        units = payload["units"]
+        dose = f"{units} {'единица' if units == 1 else 'единицы'} · {ROMAN[payload['degree']]} степень"
+        writer.writerow([username, dose, taken_at])
+    return stream.getvalue().encode("utf-8")
 
 
 def keyboard(rows):
@@ -422,6 +439,22 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         path = urllib.parse.urlparse(self.path).path
+        if path.startswith("/journal/"):
+            supplied = path.removeprefix("/journal/").removesuffix(".csv")
+            if not JOURNAL_TOKEN or not path.endswith(".csv") or not hmac.compare_digest(supplied, JOURNAL_TOKEN):
+                self.reply(404, {"error": "Страница не найдена"})
+                return
+            with db() as con:
+                content = dose_journal_csv(con)
+            self.send_response(200)
+            self.send_header("Content-Type", "text/csv; charset=utf-8")
+            self.send_header("Content-Length", str(len(content)))
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("X-Content-Type-Options", "nosniff")
+            self.send_header("Referrer-Policy", "no-referrer")
+            self.end_headers()
+            self.wfile.write(content)
+            return
         if path == "/health":
             self.reply(200, {"ok": True, "bot_configured": bool(TOKEN and APP_URL)})
             return

@@ -1,4 +1,6 @@
 import hashlib
+import csv
+import io
 import hmac
 import json
 import tempfile
@@ -189,6 +191,18 @@ class ControllerTests(unittest.TestCase):
             with server.db() as con:
                 result = server.access_request(con, 101, "MED-2", "test-link")
                 self.assertEqual(result["test_url"], "https://example.com/medical-test")
+
+    def test_csv_journal_has_only_requested_columns_and_doses(self):
+        with server.db() as con:
+            server.upsert_profile(con, {"id": 101, "first_name": "Игрок", "username": "test_player"})
+            server.issue(con, 101, 2, "csv-dose", notify=False)
+            server.access_request(con, 101, "MED-2", "csv-access", notify=False)
+            data = list(csv.reader(io.StringIO(server.dose_journal_csv(con).decode())))
+            self.assertEqual(len(data), 2)
+            self.assertEqual(len(data[0]), 3)
+            self.assertEqual(data[1][0], "@test_player")
+            self.assertEqual(data[1][1], "2 единицы · II степень")
+            self.assertRegex(data[1][2], r"\d{2}\.\d{2}\.\d{4} \d{2}:\d{2}:\d{2}")
 
 
 if __name__ == "__main__":
