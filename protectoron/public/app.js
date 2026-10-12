@@ -82,8 +82,6 @@ function sync(data){
     $('companion-open').disabled=!real||!gmConnected;
     if(!opened)$('robot-speech').textContent=`«${ownCharacter.name}. Данные реестра проверены. Укажите цель обращения».`;
   }
-  const registration=requests.find(item=>item.kind==='registration'&&item.status==='pending');
-  if(registration&&!ownCharacter)$('registration-status').textContent=`Первая привязка к персонажу ${registration.recipient_name} ожидает подтверждения ГМ.`;
   renderRequests();
   if(data.accesses&&!accessCatalog){accessCatalog=data.accesses;renderAccesses();}
   renderHistory();renderFaq(data.faq||fallbackFaq);
@@ -196,7 +194,7 @@ function selectService(service){
   for(const level of accessCatalog.levels.filter(item=>item.level>1)){const button=document.createElement('button');button.type='button';button.className='choice-button';button.dataset.accessLevel=String(level.level);button.disabled=!real||!ownCharacter;const title=document.createElement('span'),sub=document.createElement('small'),arrow=document.createElement('span');title.textContent=`${service.code}-${level.level}`;sub.textContent=level.name;arrow.textContent='→';arrow.setAttribute('aria-hidden','true');button.append(title,sub,arrow);button.addEventListener('click',()=>requestAccess(`${service.code}-${level.level}`));list.append(button);}play('click');haptic();
 }
 $('change-service').addEventListener('click',()=>{if(busy)return;selectedService=null;accessKey=null;$('access-services').hidden=false;$('access-level-panel').hidden=true;$('access-result').hidden=true;$('access-code').textContent='—';play('click');});
-async function registerCharacter(name,statusId){const data=await api('profile',{character:name});sync(data);$(statusId).textContent=data.registration_status==='verified'?'Персонаж проверен. Обслуживание доступно.':'Первая привязка отправлена на подтверждение ГМ.';play('confirm');}
+async function registerCharacter(name,statusId){const data=await api('profile',{character:name});sync(data);$(statusId).textContent=data.registration_status==='verified'?'Персонаж проверен. Обслуживание доступно.':'Укажите имя персонажа из реестра.';play('confirm');}
 $('profile-form').addEventListener('submit',async e=>{e.preventDefault();const button=e.currentTarget.querySelector('button');button.disabled=true;try{await registerCharacter($('character').value,'profile-status');}catch(error){showError(error.message);}finally{button.disabled=!real;}});
 $('registration-form').addEventListener('submit',async e=>{e.preventDefault();const button=e.currentTarget.querySelector('button');button.disabled=true;try{await registerCharacter($('registration-name').value,'registration-status');}catch(error){showError(error.message);}finally{button.disabled=!real;}});
 function renderRecipients(){

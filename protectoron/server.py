@@ -1,4 +1,4 @@
-"""Private Telegram NPC and its sprite-based Mini App. No third-party runtime deps."""
+"""Private Telegram NPC and its sprite-based Mini App. SQLite storage with independently verified backups."""
 import hashlib
 import csv
 import io
@@ -18,7 +18,8 @@ import uuid
 from contextlib import contextmanager
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from roster import Roster, normalize, account_matches
+from roster import Roster, normalize
+from backups import Backups
 
 ROOT = Path(__file__).resolve().parent
 PUBLIC = ROOT / "public"
@@ -34,6 +35,7 @@ GM_USERNAMES = {name.lstrip("@").casefold() for name in os.environ.get("GM_USERN
 GM_BIND_CODE = os.environ.get("GM_BIND_CODE", "")
 WEBHOOK_SECRET = hmac.new(TOKEN.encode(), b"protectoron-webhook", hashlib.sha256).hexdigest()
 STOP = threading.Event()
+BACKUPS = Backups(DATA_DIR)
 ROMAN = {1: "I", 2: "II", 3: "III"}
 FAQ = [
     {"id": "purpose", "question": "Для чего нужен мистериум?", "answer": "Мистериум необходим для поддержания контроля при гулификации. Индивидуальная полная доза зависит от степени: I — 1 единица, II — 2 единицы, III — 3 единицы."},
@@ -90,6 +92,7 @@ def init_db():
             created_at INTEGER NOT NULL, decided_by INTEGER, request_key TEXT NOT NULL,
             UNIQUE(user_id,kind,request_key));
         """)
+        con.execute("UPDATE requests SET status='obsolete' WHERE kind='registration' AND status='pending'")
         columns = {row[1] for row in con.execute("PRAGMA table_info(profiles)")}
         if "username" not in columns:
             con.execute("ALTER TABLE profiles ADD COLUMN username TEXT NOT NULL DEFAULT ''")
@@ -175,20 +178,15 @@ def set_setting(con, key, value):
 
 
 def owned_character(con, profile):
-    item = ROSTER.get(profile["character"])
-    if not item:
-        return None
-    if item["username"] or item["telegram_id"]:
-        return item if account_matches(item, {"id": profile["user_id"], "username": profile["username"]}) else None
-    bound = con.execute("SELECT user_id FROM bindings WHERE character_key=?", (item["key"],)).fetchone()
-    return item if bound and bound[0] == profile["user_id"] else None
+    # Names are trusted role-play identities; Telegram identifies journal actors.
+    return ROSTER.get(profile["character"])
 
 
 def require_character(con, user_id):
     profile = con.execute("SELECT * FROM profiles WHERE user_id=?", (user_id,)).fetchone()
     own = owned_character(con, profile)
     if not own:
-        raise ValueError("Сначала зарегистрируйте своего персонажа. Имя должно быть подтверждено в реестре или ГМ.")
+        raise ValueError("Сначала назовите своего персонажа из реестра.")
     return own
 
 
@@ -328,30 +326,8 @@ def register_character(con, user_id, name, source="chat"):
     entry = ROSTER.get(name)
     if not entry:
         raise ValueError("Такого персонажа нет в реестре. Проверьте имя или обратитесь к ГМ.")
-    profile = con.execute("SELECT * FROM profiles WHERE user_id=?", (user_id,)).fetchone()
-    user = {"id": user_id, "username": profile["username"]}
-    if entry["username"] or entry["telegram_id"]:
-        if not account_matches(entry, user):
-            raise ValueError("Этот персонаж привязан к другому Telegram-аккаунту.")
-        con.execute("UPDATE profiles SET character=?,pending='' WHERE user_id=?", (entry["name"], user_id))
-        return "verified"
-    existing = con.execute("SELECT user_id FROM bindings WHERE character_key=?", (entry["key"],)).fetchone()
-    if existing:
-        if existing[0] != user_id:
-            raise ValueError("Этот персонаж уже зарегистрирован другим игроком.")
-        con.execute("UPDATE profiles SET character=?,pending='' WHERE user_id=?", (entry["name"], user_id))
-        return "verified"
-    old = con.execute("SELECT id FROM requests WHERE user_id=? AND kind='registration' AND character_key=? AND status='pending'", (user_id, entry["key"])).fetchone()
-    if old:
-        return "pending"
-    if not setting(con, "gm_chat_id"):
-        raise ValueError("Для первой регистрации нужен ГМ. Чат согласования ещё не привязан.")
-    request_id = uuid.uuid4().hex
-    con.execute("INSERT INTO requests(id,kind,user_id,character_key,recipient_name,degree,report,source,created_at,request_key) VALUES(?,?,?,?,?,?,?,?,?,?)",
-                (request_id, "registration", user_id, entry["key"], entry["name"], entry["degree"], "Подтверждение владельца персонажа: в реестре пока не указан Telegram-аккаунт.", source, int(time.time()), request_id))
-    con.execute("UPDATE profiles SET pending='' WHERE user_id=?", (user_id,))
-    send_gm_report(con, con.execute("SELECT * FROM requests WHERE id=?", (request_id,)).fetchone())
-    return "pending"
+    con.execute("UPDATE profiles SET character=?,pending='' WHERE user_id=?", (entry["name"], user_id))
+    return "verified"
 
 
 def companion_request(con, user_id, name, report, key, source="chat"):
@@ -417,17 +393,9 @@ def decide_request(con, user, request_id, decision):
         entry = ROSTER.get(request["recipient_name"])
         if not entry:
             raise ValueError("Получателя больше нет в реестре.")
-        if request["kind"] == "registration":
-            profile = con.execute("SELECT * FROM profiles WHERE user_id=?", (request["user_id"],)).fetchone()
-            if (entry["username"] or entry["telegram_id"]) and not account_matches(entry, {"id": request["user_id"], "username": profile["username"]}):
-                raise ValueError("Аккаунт не совпадает с указанным в реестре.")
-            existing = con.execute("SELECT user_id FROM bindings WHERE character_key=?", (entry["key"],)).fetchone()
-            if existing and existing[0] != request["user_id"]:
-                raise ValueError("Персонаж уже зарегистрирован другим игроком.")
-            con.execute("DELETE FROM bindings WHERE user_id=?", (request["user_id"],))
-            con.execute("INSERT OR REPLACE INTO bindings VALUES(?,?,?)", (entry["key"], request["user_id"], int(time.time())))
-            con.execute("UPDATE profiles SET character=?,pending='' WHERE user_id=?", (entry["name"], request["user_id"]))
-        elif not entry["eligible"] or entry["degree"] != request["degree"]:
+        if request["kind"] != "companion":
+            raise ValueError("Подтверждение регистрации больше не требуется. Игрок может указать имя самостоятельно.")
+        if not entry["eligible"] or entry["degree"] != request["degree"]:
             raise ValueError("Дозировка получателя изменилась. Попросите новый рапорт.")
     status = "approved" if decision == "approve" else "rejected"
     con.execute("UPDATE requests SET status=?,decided_by=? WHERE id=? AND status='pending'", (status, user["id"], request_id))
@@ -470,6 +438,58 @@ def access_request(con, user_id, target, key, notify=True):
     return {"id": event_id, "target": target, "repeated": False, "test_url": url}
 
 
+def backup_summary(status):
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    def stamp(value):
+        return datetime.fromtimestamp(value, ZoneInfo("Asia/Tomsk")).strftime("%d.%m.%Y %H:%M:%S") if value else "ещё нет"
+    return ("Локальная копия: " + stamp(status.get("local_at")) +
+            "\nОтдельная проверенная копия: " + stamp(status.get("remote_at")) +
+            ("\nПоследняя попытка отдельного сохранения завершилась ошибкой." if status.get("remote_error") else ""))
+
+
+def backup_warning():
+    with db() as con:
+        if setting(con, "gm_chat_id"):
+            queue(con, setting(con, "gm_chat_id"), "Резервное копирование базы требует внимания. Проверьте /dbstats в личном чате с роботом.", thread_id=setting(con, "gm_thread_id"))
+
+
+def manual_backup(user_id):
+    try:
+        status = BACKUPS.run(force=True)
+        text = "Резервная копия создана и проверена.\n" + backup_summary(status)
+    except Exception:
+        text = "Не удалось завершить резервное копирование.\n" + backup_summary(BACKUPS.status())
+    with db() as con:
+        queue(con, user_id, text)
+
+
+def admin_command(update, user, chat, command):
+    if command not in ("/backupdb", "/dbstats"):
+        return False
+    with db() as con:
+        con.execute("BEGIN IMMEDIATE")
+        if not is_gm(con, user):
+            return True
+        if chat.get("type") != "private":
+            if chat.get("id") == setting(con, "gm_chat_id"):
+                queue(con, chat["id"], "Для /backupdb и /dbstats откройте личный чат с роботом.", thread_id=setting(con, "gm_thread_id"))
+            return True
+        if chat.get("id") != user["id"]:
+            return True
+        if con.execute("SELECT 1 FROM updates WHERE id=?", (update["update_id"],)).fetchone():
+            return True
+        con.execute("INSERT INTO updates VALUES(?,?)", (update["update_id"], int(time.time())))
+        if command == "/dbstats":
+            counts = {table: con.execute("SELECT COUNT(*) FROM " + table).fetchone()[0] for table in ("profiles", "events", "requests")}
+            queue(con, user["id"], f"Игроков: {counts['profiles']}\nСобытий: {counts['events']}\nРапортов: {counts['requests']}\n\n" + backup_summary(BACKUPS.status()))
+        else:
+            queue(con, user["id"], "Создаю локальную и отдельную копии базы и проверяю их целостность.")
+    if command == "/backupdb":
+        threading.Thread(target=manual_backup, args=(user["id"],), daemon=True).start()
+    return True
+
+
 def handle_update(update):
     callback = update.get("callback_query")
     message = callback.get("message", {}) if callback else update.get("message", {})
@@ -480,6 +500,8 @@ def handle_update(update):
     data = callback.get("data", "") if callback else ""
     text = message.get("text", "").strip() if not callback else ""
     command = text.split(maxsplit=1)[0].split("@")[0] if text else ""
+    if admin_command(update, user, chat, command):
+        return
     if chat.get("type") in ("group", "supergroup"):
         if command != "/bind_gm" and not data.startswith("gm:"):
             return
@@ -506,7 +528,7 @@ def handle_update(update):
                         set_setting(con, "gm_chat_id", chat["id"])
                         set_setting(con, "gm_thread_id", message.get("message_thread_id"))
                         set_setting(con, "gm_chat_title", chat.get("title", "ГМ"))
-                        queue(con, chat["id"], "<b>Чат ГМ привязан.</b>\nРапорты и запросы первой регистрации будут приходить сюда. Согласовывать могут только @VaultTecGm и @gj0xl.", thread_id=message.get("message_thread_id"))
+                        queue(con, chat["id"], "<b>Чат ГМ привязан.</b>\nРапорты для выдачи товарищу будут приходить сюда. Согласовывать могут только @VaultTecGm и @gj0xl.", thread_id=message.get("message_thread_id"))
                 else:
                     if chat["id"] != setting(con, "gm_chat_id") or (setting(con, "gm_thread_id") and message.get("message_thread_id") != setting(con, "gm_thread_id")):
                         return
@@ -560,10 +582,10 @@ def handle_update(update):
                 queue(con, user["id"], "Реестр перечитан. Классы, степени и привязки актуальны.", home_keyboard())
             elif data == "character" or (not own and (command in ("/start", "/menu", "/mysterium", "/cancel") or data in ("home", "mysterium", "companion"))):
                 con.execute("UPDATE profiles SET pending='register' WHERE user_id=?", (user["id"],))
-                queue(con, user["id"], "Протектрон поднимает оптический модуль. «Для проверки права на обслуживание назовите вашего персонажа — так, как он записан в реестре».\n\nЕсли аккаунт ещё не указан в реестре, первую привязку подтвердит ГМ.", {"force_reply": True, "input_field_placeholder": "Имя персонажа"})
+                queue(con, user["id"], "Протектрон поднимает оптический модуль. «Для проверки права на обслуживание назовите вашего персонажа — так, как он записан в реестре».\n\nИмя, класс и дозировка проверяются по реестру; подтверждение ГМ не требуется.", {"force_reply": True, "input_field_placeholder": "Имя персонажа"})
             elif text and not text.startswith("/") and profile["pending"] in ("register", "character"):
                 result = register_character(con, user["id"], text)
-                queue(con, user["id"], "«Имя проверено. Контроллер готов к обслуживанию»." if result == "verified" else "«Запрос на первую привязку отправлен ГМ. Обслуживание откроется после подтверждения владельца персонажа».", home_keyboard() if result == "verified" else keyboard([[cb("Проверить статус", "home")]]))
+                queue(con, user["id"], "«Имя проверено. Контроллер готов к обслуживанию».", home_keyboard())
             elif command in ("/start", "/menu", "/cancel") or data == "home":
                 con.execute("UPDATE profiles SET pending='' WHERE user_id=?", (user["id"],))
                 queue(con, user["id"], f"«{html.escape(own['name'])}. Данные реестра проверены. Укажите цель обращения».", home_keyboard())
@@ -812,7 +834,7 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/health":
             with db() as con:
                 connected = bool(setting(con, "gm_chat_id"))
-            self.reply(200, {"ok": True, "bot_configured": bool(TOKEN and APP_URL), "gm_connected": connected, "registry_ready": bool(ROSTER.entries)})
+            self.reply(200, {"ok": True, "bot_configured": bool(TOKEN and APP_URL), "gm_connected": connected, "registry_ready": bool(ROSTER.entries), "backup": {key: BACKUPS.status().get(key) for key in ("local_at", "remote_at", "remote_verified", "remote_error")}})
             return
         file = (PUBLIC / (path.lstrip("/") or "index.html")).resolve()
         if not file.is_relative_to(PUBLIC) or not file.is_file():
@@ -920,7 +942,14 @@ def roster_worker():
 def main():
     if os.environ.get("RAILWAY_ENVIRONMENT_ID") and not (TOKEN and APP_URL and os.environ.get("DATA_DIR")):
         raise SystemExit("BOT_TOKEN, APP_URL and persistent DATA_DIR are required")
+    if os.environ.get("RAILWAY_ENVIRONMENT_ID") and not os.path.ismount(DATA_DIR):
+        raise SystemExit("Persistent database volume is not mounted; refusing to create an empty database")
+    if os.environ.get("RAILWAY_ENVIRONMENT_ID") and not (DATA_DIR / "protectoron.sqlite3").is_file():
+        existing = BACKUPS.status().get("local_at") or BACKUPS.s3().list_objects_v2(Bucket=BACKUPS.bucket, Prefix="protectoron/daily/", MaxKeys=1).get("Contents")
+        if existing:
+            raise SystemExit("Existing database is missing; restore a verified backup instead of creating an empty database")
     init_db()
+    threading.Thread(target=BACKUPS.worker, args=(STOP, backup_warning), daemon=True).start()
     if TOKEN and APP_URL:
         threading.Thread(target=setup_bot, daemon=True).start()
         threading.Thread(target=outbox_worker, daemon=True).start()

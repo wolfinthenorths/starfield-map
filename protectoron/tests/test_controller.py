@@ -220,7 +220,7 @@ class ControllerTests(unittest.TestCase):
         with server.db() as con:
             self.assertEqual(server.self_issue(con, 101, "own", False)["units"], 2)
             with self.assertRaises(ValueError): server.self_issue(con, 202, "raider", False)
-            with self.assertRaises(ValueError): server.register_character(con, 202, "Цифер")
+            self.assertEqual(server.register_character(con, 202, "Цифер"), "verified")
 
     def test_companion_approval_is_not_issuance_and_collection_is_once(self):
         with server.db() as con:
@@ -248,14 +248,27 @@ class ControllerTests(unittest.TestCase):
             server.decide_request(con, {"id": 902, "username": "gj0xl"}, rejected["id"], "reject")
             with self.assertRaises(ValueError): server.collect_companion(con, 202, rejected["id"], False)
 
-    def test_unmapped_registration_requires_gm_and_prevents_takeover(self):
+    def test_name_registration_is_immediate_without_gm_requests(self):
         with server.db() as con:
-            self.assertEqual(server.register_character(con, 202, "Новый", "app"), "pending")
-            request = con.execute("SELECT id FROM requests WHERE kind='registration'").fetchone()[0]
-            self.assertEqual(server.require_character(con, 202)["name"], "Эшвейл")
-            server.decide_request(con, {"id": 901, "username": "VaultTecGm"}, request, "approve")
+            con.execute("DELETE FROM settings")
+            self.assertEqual(server.register_character(con, 202, "Новый", "app"), "verified")
             self.assertEqual(server.require_character(con, 202)["name"], "Новый")
-            with self.assertRaises(ValueError): server.register_character(con, 101, "Новый", "app")
+            self.assertEqual(server.register_character(con, 101, "Новый", "app"), "verified")
+            with self.assertRaises(ValueError): server.register_character(con, 202, "Нет в реестре")
+            self.assertEqual(con.execute("SELECT COUNT(*) FROM requests").fetchone()[0], 0)
+            self.assertEqual(con.execute("SELECT COUNT(*) FROM outbox").fetchone()[0], 0)
+
+    def test_stats_command_only_for_gms_and_duplicate_ignored(self):
+        base = {"chat": {"id": 901, "type": "private"}, "text": "/dbstats"}
+        server.handle_update({"update_id": 80, "message": {**base, "chat": {"id": 101, "type": "private"}, "from": {"id": 101}}})
+        with server.db() as con: self.assertEqual(con.execute("SELECT COUNT(*) FROM outbox").fetchone()[0], 0)
+        update = {"update_id": 81, "message": {**base, "from": {"id": 901, "username": "VaultTecGm"}}}
+        server.handle_update(update)
+        server.handle_update(update)
+        with server.db() as con:
+            rows = list(con.execute("SELECT payload FROM outbox"))
+            self.assertEqual(len(rows), 1)
+            self.assertIn("Событий:", json.loads(rows[0][0])["text"])
 
     def test_group_binding_only_allowed_gm_with_code(self):
         with server.db() as con: con.execute("DELETE FROM settings")
