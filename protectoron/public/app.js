@@ -37,6 +37,7 @@ function unlockAudio(){
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 let issuanceKey = null, accessKey = null;
 let accessCatalog=null,selectedService=null;
+let ownCharacter=null,characters=[],requests=[],selectedRecipient=null,companionKey=null,gmConnected=false;
 function freshKey(){return crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;}
 function haptic(type='light'){try {tg?.HapticFeedback?.impactOccurred(type);} catch {}}
 function play(name){
@@ -65,7 +66,25 @@ function setTab(name){
 function sync(data){
   if(data.profile)profile=data.profile;
   if(data.events)events=data.events;
-  $('character').value=profile.character||'';
+  if(document.activeElement!==$('character'))$('character').value=profile.character||'';
+  if('own_character' in data)ownCharacter=data.own_character;
+  if(data.characters)characters=data.characters;
+  if(data.requests)requests=data.requests;
+  if('gm_connected' in data)gmConnected=data.gm_connected;
+  $('registration-panel').hidden=Boolean(ownCharacter);
+  if($('receipt-panel').hidden)$('degree-panel').hidden=!ownCharacter||!$('companion-panel').hidden;
+  if(ownCharacter){
+    if(!opened)degree=ownCharacter.degree;
+    $('own-name').textContent=ownCharacter.name;
+    $('own-details').textContent=ownCharacter.class+(ownCharacter.degree?` · ${roman[ownCharacter.degree]} степень гулификации`:'');
+    $('own-dose-note').textContent=ownCharacter.eligible?`Полная доза по реестру: ${ownCharacter.degree} ${ownCharacter.degree===1?'единица':'единицы'}.`:'Личная выдача мистериума для вашего класса недоступна. Для товарища можно подать рапорт.';
+    $('dispense-button').disabled=busy||!real||!ownCharacter.eligible;
+    $('companion-open').disabled=!real||busy||!gmConnected;
+    if(!opened)$('robot-speech').textContent=`«${ownCharacter.name}. Данные реестра проверены. Укажите цель обращения».`;
+  }
+  const registration=requests.find(item=>item.kind==='registration'&&item.status==='pending');
+  if(registration&&!ownCharacter)$('registration-status').textContent=`Первая привязка к персонажу ${registration.recipient_name} ожидает подтверждения ГМ.`;
+  renderRequests();
   if(data.accesses&&!accessCatalog){accessCatalog=data.accesses;renderAccesses();}
   renderHistory();renderFaq(data.faq||fallbackFaq);
 }
@@ -113,7 +132,7 @@ function drawScene(){
   if(opened&&sprites.vial){
     const count=degree||1;
     const height=76,width=Math.round(height*sprites.vial.width/sprites.vial.height);
-    for(let i=0;i<count;i++)ctx.drawImage(sprites.vial,393-width/2+(i-(count-1)/2)*29,164,width,height);
+    for(let i=0;i<count;i++){ctx.save();ctx.translate(389+(i-(count-1)/2)*18,222+(i-(count-1)/2)*8);ctx.rotate(-Math.PI/3);ctx.drawImage(sprites.vial,-width/2,-height/2,width,height);ctx.restore();}
   }
 }
 async function animateOpen(){
@@ -131,8 +150,9 @@ async function animateOpen(){
 function showReceipt(receipt){
   degree=receipt.degree;$('degree-panel').hidden=true;$('receipt-panel').hidden=false;
   $('receipt-dose').textContent=`${receipt.units} ${receipt.units===1?'единица':'единицы'} · полная доза`;
+  if(receipt.for_companion)$('receipt-dose').textContent+=` · для ${receipt.recipient}`;
   $('scene-hint').textContent=`Степень ${roman[degree]} · выдача зафиксирована`;
-  $('robot-speech').textContent=`«Степень гулификации ${roman[degree]}. Индивидуальная доза подготовлена. Пожалуйста, соблюдайте интервал приёма».`;
+  $('robot-speech').textContent=receipt.for_companion?`«Рапорт согласован. Полная доза для ${receipt.recipient} подготовлена».`:`«Степень гулификации ${roman[degree]}. Индивидуальная доза подготовлена. Пожалуйста, соблюдайте интервал приёма».`;
 }
 function selectDegree(value){
   degree=value;document.querySelectorAll('[data-degree]').forEach(button=>{const selected=Number(button.dataset.degree)===value;button.classList.toggle('selected',selected);button.setAttribute('aria-pressed',String(selected));});
@@ -145,19 +165,18 @@ document.querySelectorAll('[data-degree]').forEach(button=>button.addEventListen
 $('sound').addEventListener('click',()=>{sound=!sound;try{localStorage.setItem('protectoron-sound',sound?'on':'off');}catch{}updateSound();if(sound)unlockAudio().then(()=>play('robot'));});
 document.addEventListener('pointerdown',()=>{if(sound)unlockAudio();},{passive:true});
 $('dispense-button').addEventListener('click',async()=>{
-  if(busy||!degree)return;busy=true;clearError();$('dispense-button').disabled=true;document.querySelectorAll('[data-degree]').forEach(b=>b.disabled=true);
+  if(busy||!ownCharacter?.eligible)return;busy=true;clearError();$('dispense-button').disabled=true;
   play('click');
   $('dispense-button').firstElementChild.textContent='Обработка обращения…';
   if(!issuanceKey)issuanceKey=freshKey();
   try{
-    const data=await api('dispense',{degree,requestId:issuanceKey});
+    const data=await api('dispense',{requestId:issuanceKey});
     sync(data);await animateOpen();showReceipt(data.receipt);play('confirm');haptic('medium');
-  }catch(e){showError(e.message);$('dispense-button').disabled=!real;}
-  finally{busy=false;document.querySelectorAll('[data-degree]').forEach(b=>b.disabled=false);$('dispense-button').firstElementChild.textContent='Получить мистериум';}
+  }catch(e){showError(e.message);$('dispense-button').disabled=!real||!ownCharacter?.eligible;}
+  finally{busy=false;$('dispense-button').firstElementChild.textContent='Получить мистериум';}
 });
 $('again-button').addEventListener('click',()=>{
-  if(busy)return;play('box-close');opened=false;frame=0;degree=null;issuanceKey=null;drawScene();$('receipt-panel').hidden=true;$('degree-panel').hidden=false;$('scene-state').textContent='ЗАМОК ЗАКРЫТ';$('scene-hint').textContent='Ожидание обращения';$('robot-speech').textContent='«Для подготовки индивидуальной дозы укажите степень гулификации вашего персонажа».';
-  document.querySelectorAll('[data-degree]').forEach(b=>{b.classList.remove('selected');b.setAttribute('aria-pressed','false');});$('dispense-button').disabled=true;
+  if(busy)return;play('box-close');opened=false;frame=0;degree=ownCharacter?.degree||null;issuanceKey=null;drawScene();$('receipt-panel').hidden=true;$('degree-panel').hidden=!ownCharacter;$('scene-state').textContent='ЗАМОК ЗАКРЫТ';$('scene-hint').textContent='Ожидание обращения';$('robot-speech').textContent='«Доза определяется по реестру персонажей. Укажите цель обращения».';$('dispense-button').disabled=!real||!ownCharacter?.eligible;
 });
 async function requestAccess(target){
   if(busy||!real)return;busy=true;clearError();document.querySelectorAll('[data-access-level]').forEach(b=>b.disabled=true);
@@ -165,7 +184,7 @@ async function requestAccess(target){
   try{const data=await api('access',{target,requestId:accessKey});sync(data);accessKey=null;$('access-result').replaceChildren();const text=document.createElement('p');text.textContent=`«Выбран допуск ${target}. Повышение квалификации проводится через тест».`;$('access-result').append(text);
     if(data.request.test_url){const link=document.createElement('a');link.href=data.request.test_url;link.target='_blank';link.rel='noopener noreferrer';link.textContent=`Пройти тест · ${target}`;$('access-result').append(link);}else{const note=document.createElement('p');note.textContent='Ссылка на тест для этого допуска будет добавлена позже.';$('access-result').append(note);}
     $('access-result').hidden=false;play('confirm');haptic('medium');}
-  catch(e){showError(e.message);}finally{busy=false;document.querySelectorAll('[data-access-level]').forEach(b=>b.disabled=!real);}
+  catch(e){showError(e.message);}finally{busy=false;document.querySelectorAll('[data-access-level]').forEach(b=>b.disabled=!real||!ownCharacter);}
 }
 function renderAccesses(){
   if(!accessCatalog)return;const list=$('access-services');list.replaceChildren();
@@ -174,10 +193,27 @@ function renderAccesses(){
 function selectService(service){
   selectedService=service;$('access-services').hidden=true;$('access-level-panel').hidden=false;$('access-result').hidden=true;$('access-code').textContent=service.code;$('service-description').textContent=service.description;accessKey=null;
   const list=$('access-levels');list.replaceChildren();
-  for(const level of accessCatalog.levels.filter(item=>item.level>1)){const button=document.createElement('button');button.type='button';button.className='choice-button';button.dataset.accessLevel=String(level.level);button.disabled=!real;const title=document.createElement('span'),sub=document.createElement('small'),arrow=document.createElement('span');title.textContent=`${service.code}-${level.level}`;sub.textContent=level.name;arrow.textContent='→';arrow.setAttribute('aria-hidden','true');button.append(title,sub,arrow);button.addEventListener('click',()=>requestAccess(`${service.code}-${level.level}`));list.append(button);}play('click');haptic();
+  for(const level of accessCatalog.levels.filter(item=>item.level>1)){const button=document.createElement('button');button.type='button';button.className='choice-button';button.dataset.accessLevel=String(level.level);button.disabled=!real||!ownCharacter;const title=document.createElement('span'),sub=document.createElement('small'),arrow=document.createElement('span');title.textContent=`${service.code}-${level.level}`;sub.textContent=level.name;arrow.textContent='→';arrow.setAttribute('aria-hidden','true');button.append(title,sub,arrow);button.addEventListener('click',()=>requestAccess(`${service.code}-${level.level}`));list.append(button);}play('click');haptic();
 }
 $('change-service').addEventListener('click',()=>{if(busy)return;selectedService=null;accessKey=null;$('access-services').hidden=false;$('access-level-panel').hidden=true;$('access-result').hidden=true;$('access-code').textContent='—';play('click');});
-$('profile-form').addEventListener('submit',async e=>{e.preventDefault();const button=e.currentTarget.querySelector('button');button.disabled=true;try{const data=await api('profile',{character:$('character').value});sync(data);$('profile-status').textContent='Имя персонажа сохранено.';play('confirm');}catch(error){showError(error.message);}finally{button.disabled=!real;}});
+async function registerCharacter(name,statusId){const data=await api('profile',{character:name});sync(data);$(statusId).textContent=data.registration_status==='verified'?'Персонаж проверен. Обслуживание доступно.':'Первая привязка отправлена на подтверждение ГМ.';play('confirm');}
+$('profile-form').addEventListener('submit',async e=>{e.preventDefault();const button=e.currentTarget.querySelector('button');button.disabled=true;try{await registerCharacter($('character').value,'profile-status');}catch(error){showError(error.message);}finally{button.disabled=!real;}});
+$('registration-form').addEventListener('submit',async e=>{e.preventDefault();const button=e.currentTarget.querySelector('button');button.disabled=true;try{await registerCharacter($('registration-name').value,'registration-status');}catch(error){showError(error.message);}finally{button.disabled=!real;}});
+function renderRecipients(){
+  const list=$('companion-recipients');list.replaceChildren();
+  for(const item of characters.filter(item=>item.eligible&&item.name!==ownCharacter?.name)){const button=document.createElement('button');button.className='service-button';button.type='button';const title=document.createElement('strong'),label=document.createElement('span');title.textContent=item.name;label.textContent=`${roman[item.degree]} степень · ${item.degree} ед.`;button.append(title,label);button.classList.toggle('selected',selectedRecipient===item.name);button.addEventListener('click',()=>{selectedRecipient=item.name;companionKey=null;renderRecipients();$('companion-send').disabled=!real;play('click');});list.append(button);}
+  if(!list.children.length){const p=document.createElement('p');p.className='fine-print';p.textContent='Других гулей с указанной степенью в реестре нет.';list.append(p);}
+}
+$('companion-open').addEventListener('click',()=>{if(!ownCharacter)return;$('companion-panel').hidden=false;$('degree-panel').hidden=true;selectedRecipient=null;companionKey=null;$('companion-send').disabled=true;renderRecipients();});
+$('companion-back').addEventListener('click',()=>{if(busy)return;$('companion-panel').hidden=true;$('degree-panel').hidden=!ownCharacter;});
+$('companion-form').addEventListener('submit',async e=>{e.preventDefault();if(busy||!selectedRecipient)return;busy=true;$('companion-send').disabled=true;if(!companionKey)companionKey=freshKey();try{const data=await api('companion',{recipient:selectedRecipient,report:$('companion-report').value,requestId:companionKey});sync(data);$('companion-status').textContent='Рапорт отправлен ГМ. После согласования появится кнопка получения дозы.';companionKey=null;play('confirm');}catch(error){showError(error.message);}finally{busy=false;$('companion-send').disabled=!real;}});
+function renderRequests(){
+  const list=$('requests-list');list.replaceChildren();
+  for(const request of requests.filter(item=>item.kind==='companion')){const card=document.createElement('article');card.className='request-card';const title=document.createElement('strong'),status=document.createElement('p');title.textContent=`Для ${request.recipient_name} · ${request.degree} ед.`;status.textContent={pending:'Рапорт ожидает решения ГМ',approved:'Рапорт согласован. Доза доступна к получению',rejected:'Рапорт отклонён ГМ',issued:'Согласованная доза получена'}[request.status]||request.status;card.append(title,status);
+    if(request.status==='approved'){const button=document.createElement('button');button.type='button';button.className='secondary-button';button.textContent='Получить согласованную дозу';button.addEventListener('click',async()=>{if(busy)return;busy=true;button.disabled=true;play('click');try{const data=await api('collect',{id:request.id});sync(data);degree=data.receipt.degree;$('companion-panel').hidden=true;setTab('dispense');await animateOpen();showReceipt(data.receipt);play('confirm');}catch(error){showError(error.message);button.disabled=false;}finally{busy=false;}});card.append(button);}list.append(card);
+  }
+}
+setInterval(async()=>{if(!real||busy||document.hidden||!requests.some(item=>item.status==='pending'||item.status==='approved'))return;try{sync(await api('state'));}catch{}},10000);
 async function loadSprites(){
   await Promise.all(Object.entries({case:'box-cut.png',opening:'boxOpening-cut.png',robot:'robotSprite-cut.png',floor:'floor-cut.png',vial:'mysterium.webp'}).map(([key,file])=>new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>{sprites[key]=img;resolve();};img.onerror=()=>reject(new Error('Не удалось загрузить спрайты. Обновите терминал.'));img.src=`/assets/${file}`;})));
   drawScene();
@@ -197,6 +233,7 @@ async function start(){
   }else{
     $('connection-label').textContent='Просмотр терминала';$('demo-notice').hidden=false;
     $('profile-form').querySelector('button').disabled=true;
+    $('registration-form').querySelector('button').disabled=true;
   }
 }
 start();

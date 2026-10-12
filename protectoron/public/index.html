@@ -31,17 +31,20 @@
         <canvas id="scene" width="640" height="320" role="img" aria-label="Робот-контроллер рядом с закрытым контейнером мистериума"></canvas>
         <div class="scene-foot"><span id="scene-hint">Ожидание обращения</span><span class="scene-coordinate">M–84 / MED</span></div>
       </div>
-      <div class="speech"><img src="/assets/robotSprite-cut.png" alt="" class="robot-avatar"><div><span class="eyebrow">КОНТРОЛЛЕР</span><p id="robot-speech" aria-live="polite">«Для подготовки индивидуальной дозы укажите степень гулификации вашего персонажа».</p></div></div>
-      <div id="degree-panel" class="degree-panel">
-        <div class="field-heading"><label>Степень гулификации</label><span>ПОЛНАЯ ДОЗА</span></div>
-        <div class="degrees" role="group" aria-label="Степень гулификации">
-          <button data-degree="1" type="button" aria-pressed="false"><strong>I</strong><span>1 единица</span></button>
-          <button data-degree="2" type="button" aria-pressed="false"><strong>II</strong><span>2 единицы</span></button>
-          <button data-degree="3" type="button" aria-pressed="false"><strong>III</strong><span>3 единицы</span></button>
-        </div>
-        <button id="dispense-button" class="primary-button" disabled type="button"><span>Получить мистериум</span><span aria-hidden="true">→</span></button>
-        <p class="fine-print">После выбора контейнер откроется. Выдача сохранится в журнале.</p>
+      <div class="speech"><img src="/assets/robotSprite-cut.png" alt="" class="robot-avatar"><div><span class="eyebrow">КОНТРОЛЛЕР</span><p id="robot-speech" aria-live="polite">«Назовите персонажа. Я проверю класс и дозировку по реестру».</p></div></div>
+      <div id="registration-panel" class="profile-card">
+        <span class="eyebrow">ПЕРВАЯ ПРОВЕРКА</span><h2>Имя вашего персонажа</h2>
+        <form id="registration-form"><label for="registration-name">Как персонаж записан в реестре?</label><div class="input-row"><input id="registration-name" maxlength="80" placeholder="Имя персонажа" required><button class="secondary-button" type="submit">Проверить</button></div></form>
+        <p id="registration-status" class="fine-print" aria-live="polite">Если аккаунт ещё не указан в таблице, первую привязку подтвердит ГМ.</p>
       </div>
+      <div id="degree-panel" class="degree-panel" hidden>
+        <div class="own-card"><span class="eyebrow">ДАННЫЕ РЕЕСТРА</span><strong id="own-name"></strong><p id="own-details"></p></div>
+        <button id="dispense-button" class="primary-button" disabled type="button"><span>Получить мистериум</span><span aria-hidden="true">→</span></button>
+        <p id="own-dose-note" class="fine-print">Доза определяется классом и степенью из реестра.</p>
+        <button id="companion-open" class="secondary-button companion-open" type="button">Взять для товарища</button>
+      </div>
+      <div id="companion-panel" class="profile-card" hidden><span class="eyebrow">ВЫДАЧА ПО РАПОРТУ</span><h2>Для кого нужен препарат?</h2><div id="companion-recipients" class="access-services"></div><form id="companion-form"><label for="companion-report">Коротко опишите ситуацию</label><textarea id="companion-report" minlength="5" maxlength="1200" rows="4" placeholder="Почему товарищ не может получить свою дозу самостоятельно?" required></textarea><button id="companion-send" class="primary-button" type="submit" disabled><span>Отправить рапорт ГМ</span><span aria-hidden="true">→</span></button></form><p id="companion-status" class="fine-print" aria-live="polite"></p><button id="companion-back" class="text-button" type="button">Вернуться к личной выдаче</button></div>
+      <div id="requests-list" class="requests-list"></div>
       <div id="receipt-panel" class="receipt-panel" hidden>
         <img src="/assets/mysterium.webp" alt="Флакон мистериума">
         <div><span class="eyebrow">ВЫДАЧА ЗАФИКСИРОВАНА</span><h2 id="receipt-dose">Полная доза</h2><p>Выдача сохранена в журнале.</p></div>
@@ -69,7 +72,7 @@
 
     <section id="history" class="view" aria-labelledby="history-title">
       <div class="section-heading"><div><p class="eyebrow">ЛИЧНЫЕ ЗАПИСИ</p><h1 id="history-title">Журнал обращений</h1></div></div>
-      <form id="profile-form" class="profile-card"><label for="character">Имя персонажа</label><div class="input-row"><input id="character" maxlength="80" placeholder="Как к вам обращаться?" autocomplete="off"><button class="secondary-button" type="submit">Сохранить</button></div><p id="profile-status" class="fine-print" aria-live="polite">Имя используется в репликах контроллера.</p></form>
+      <form id="profile-form" class="profile-card"><label for="character">Регистрация другого персонажа</label><div class="input-row"><input id="character" maxlength="80" placeholder="Имя из реестра" autocomplete="off"><button class="secondary-button" type="submit">Проверить</button></div><p id="profile-status" class="fine-print" aria-live="polite">Привязка проверяется по таблице или подтверждается ГМ.</p></form>
       <div id="history-list" class="history-list"><p class="empty-state">Обращений пока нет.</p></div>
     </section>
     <div id="error" class="error" role="alert" hidden></div>

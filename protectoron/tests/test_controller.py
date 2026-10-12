@@ -10,6 +10,7 @@ import urllib.parse
 from pathlib import Path
 from unittest.mock import patch
 import server
+from roster import Roster, parse_roster, account_matches
 
 
 def signed(user_id=101, now=1000, token="test-token"):
@@ -49,11 +50,22 @@ class ControllerTests(unittest.TestCase):
         self.patch = patch.object(server, "DATA_DIR", Path(self.directory.name))
         self.patch.start()
         server.init_db()
+        roster = Roster("")
+        roster.entries = parse_roster("Имя персонажа,Класс,Степень,Telegram-аккаунт,Telegram ID\nЦифер,Гуль,II,,101\nЭшвейл,Райдер,,,202\nНовый,Гуль,III,,\n")
+        self.roster_patch = patch.object(server, "ROSTER", roster)
+        self.roster_patch.start()
+        self.refresh_patch = patch.object(roster, "refresh", return_value=roster.entries)
+        self.refresh_patch.start()
         with server.db() as con:
             server.upsert_profile(con, {"id": 101, "first_name": "Игрок"})
             server.upsert_profile(con, {"id": 202, "first_name": "Другой"})
+            con.execute("UPDATE profiles SET character='Цифер' WHERE user_id=101")
+            con.execute("UPDATE profiles SET character='Эшвейл' WHERE user_id=202")
+            server.set_setting(con, "gm_chat_id", -1001)
 
     def tearDown(self):
+        self.refresh_patch.stop()
+        self.roster_patch.stop()
         self.patch.stop()
         self.directory.cleanup()
 
@@ -108,8 +120,8 @@ class ControllerTests(unittest.TestCase):
         with server.db() as con:
             self.assertEqual(con.execute("SELECT COUNT(*) FROM events").fetchone()[0], 0)
             sent = json.loads(con.execute("SELECT payload FROM outbox").fetchone()[0])
-            self.assertIn("степень гулификации", sent["text"])
-            callback = sent["reply_markup"]["inline_keyboard"][2][0]["callback_data"]
+            self.assertIn("II", sent["text"])
+            callback = sent["reply_markup"]["inline_keyboard"][0][0]["callback_data"]
         update = {"update_id": 12, "callback_query": {"id": "callback", "from": {"id": 101},
                   "message": {"chat": {"id": 101, "type": "private"}}, "data": callback}}
         with patch.object(server, "telegram", return_value=True):
@@ -119,7 +131,7 @@ class ControllerTests(unittest.TestCase):
         with server.db() as con:
             events = server.state(con, 101)["events"]
             self.assertEqual(len(events), 1)
-            self.assertEqual(events[0]["payload"]["units"], 3)
+            self.assertEqual(events[0]["payload"]["units"], 2)
 
     def test_another_user_cannot_use_degree_prompt(self):
         with server.db() as con:
@@ -203,6 +215,65 @@ class ControllerTests(unittest.TestCase):
             self.assertEqual(data[1][0], "@test_player")
             self.assertEqual(data[1][1], "2 единицы · II степень")
             self.assertRegex(data[1][2], r"\d{2}\.\d{2}\.\d{4} \d{2}:\d{2}:\d{2}")
+
+    def test_self_dose_derived_from_registry_and_raider_denied(self):
+        with server.db() as con:
+            self.assertEqual(server.self_issue(con, 101, "own", False)["units"], 2)
+            with self.assertRaises(ValueError): server.self_issue(con, 202, "raider", False)
+            with self.assertRaises(ValueError): server.register_character(con, 202, "Цифер")
+
+    def test_companion_approval_is_not_issuance_and_collection_is_once(self):
+        with server.db() as con:
+            request = server.companion_request(con, 202, "Цифер", "Товарищ ранен и не может прийти сам", "buddy", "app")
+            with self.assertRaises(ValueError): server.collect_companion(con, 202, request["id"], False)
+            with self.assertRaises(ValueError): server.decide_request(con, {"id": 777, "username": "outsider"}, request["id"], "approve")
+            server.decide_request(con, {"id": 901, "username": "VaultTecGm"}, request["id"], "approve")
+            self.assertEqual(con.execute("SELECT COUNT(*) FROM events").fetchone()[0], 0)
+            self.assertEqual(con.execute("SELECT COUNT(*) FROM outbox WHERE user_id>0").fetchone()[0], 0)
+            with self.assertRaises(ValueError): server.collect_companion(con, 101, request["id"], False)
+            first = server.collect_companion(con, 202, request["id"], False)
+            second = server.collect_companion(con, 202, request["id"], False)
+            self.assertEqual(first["id"], second["id"])
+            self.assertEqual(first["recipient"], "Цифер")
+            self.assertEqual(con.execute("SELECT COUNT(*) FROM events").fetchone()[0], 1)
+            self.assertEqual(con.execute("SELECT COUNT(*) FROM outbox WHERE user_id>0").fetchone()[0], 0)
+
+    def test_companion_changed_degree_and_rejection_prevent_collection(self):
+        with server.db() as con:
+            request = server.companion_request(con, 202, "Цифер", "Нужна доставка товарищу", "change", "app")
+            server.decide_request(con, {"id": 901, "username": "VaultTecGm"}, request["id"], "approve")
+            server.ROSTER.get("Цифер")["degree"] = 3
+            with self.assertRaises(ValueError): server.collect_companion(con, 202, request["id"], False)
+            rejected = server.companion_request(con, 202, "Цифер", "Повторная доставка товарищу", "reject", "app")
+            server.decide_request(con, {"id": 902, "username": "gj0xl"}, rejected["id"], "reject")
+            with self.assertRaises(ValueError): server.collect_companion(con, 202, rejected["id"], False)
+
+    def test_unmapped_registration_requires_gm_and_prevents_takeover(self):
+        with server.db() as con:
+            self.assertEqual(server.register_character(con, 202, "Новый", "app"), "pending")
+            request = con.execute("SELECT id FROM requests WHERE kind='registration'").fetchone()[0]
+            self.assertEqual(server.require_character(con, 202)["name"], "Эшвейл")
+            server.decide_request(con, {"id": 901, "username": "VaultTecGm"}, request, "approve")
+            self.assertEqual(server.require_character(con, 202)["name"], "Новый")
+            with self.assertRaises(ValueError): server.register_character(con, 101, "Новый", "app")
+
+    def test_group_binding_only_allowed_gm_with_code(self):
+        with server.db() as con: con.execute("DELETE FROM settings")
+        base = {"chat": {"id": -1009, "type": "supergroup"}, "text": "/bind_gm@ptotectoronbot test-code"}
+        with patch.object(server, "GM_BIND_CODE", "test-code"):
+            server.handle_update({"update_id": 70, "message": {**base, "from": {"id": 777, "username": "outsider"}}})
+            with server.db() as con: self.assertIsNone(server.setting(con, "gm_chat_id"))
+            server.handle_update({"update_id": 71, "message": {**base, "from": {"id": 901, "username": "VaultTecGm"}}})
+            with server.db() as con: self.assertEqual(server.setting(con, "gm_chat_id"), -1009)
+
+
+class RegistryTests(unittest.TestCase):
+    def test_duplicate_names_rejected_and_owner_id_has_priority(self):
+        with self.assertRaises(ValueError): parse_roster("Имя персонажа,Класс,Степень\nЦифер,Гуль,II\nцифер,Гуль,I")
+        entry = parse_roster("Имя персонажа,Класс,Степень,Telegram-аккаунт,Telegram ID\n Цифер , Гуль ,II,@player,123")["цифер"]
+        self.assertTrue(entry["eligible"])
+        self.assertTrue(account_matches(entry, {"id": 123}))
+        self.assertFalse(account_matches(entry, {"id": 999, "username": "player"}))
 
 
 if __name__ == "__main__":

@@ -18,6 +18,7 @@ import uuid
 from contextlib import contextmanager
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from roster import Roster, normalize, account_matches
 
 ROOT = Path(__file__).resolve().parent
 PUBLIC = ROOT / "public"
@@ -28,6 +29,9 @@ TOKEN = os.environ.get("BOT_TOKEN", "")
 APP_URL = os.environ.get("APP_URL", "").rstrip("/")
 DATA_DIR = Path(os.environ.get("DATA_DIR", str(ROOT / "local-data")))
 JOURNAL_TOKEN = os.environ.get("JOURNAL_TOKEN", "")
+ROSTER = Roster(os.environ.get("ROSTER_URL", ""))
+GM_USERNAMES = {name.lstrip("@").casefold() for name in os.environ.get("GM_USERNAMES", "VaultTecGm,gj0xl").split(",") if name.strip()}
+GM_BIND_CODE = os.environ.get("GM_BIND_CODE", "")
 WEBHOOK_SECRET = hmac.new(TOKEN.encode(), b"protectoron-webhook", hashlib.sha256).hexdigest()
 STOP = threading.Event()
 ROMAN = {1: "I", 2: "II", 3: "III"}
@@ -76,10 +80,23 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL,
             payload TEXT NOT NULL, delivered INTEGER NOT NULL DEFAULT 0,
             attempts INTEGER NOT NULL DEFAULT 0, next_attempt INTEGER NOT NULL DEFAULT 0);
+        CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+        CREATE TABLE IF NOT EXISTS gm_accounts (user_id INTEGER PRIMARY KEY, username TEXT UNIQUE NOT NULL);
+        CREATE TABLE IF NOT EXISTS bindings (character_key TEXT PRIMARY KEY, user_id INTEGER UNIQUE NOT NULL, created_at INTEGER NOT NULL);
+        CREATE TABLE IF NOT EXISTS requests (
+            id TEXT PRIMARY KEY, kind TEXT NOT NULL, user_id INTEGER NOT NULL,
+            character_key TEXT NOT NULL, recipient_name TEXT NOT NULL, degree INTEGER,
+            report TEXT NOT NULL, source TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'pending',
+            created_at INTEGER NOT NULL, decided_by INTEGER, request_key TEXT NOT NULL,
+            UNIQUE(user_id,kind,request_key));
         """)
         columns = {row[1] for row in con.execute("PRAGMA table_info(profiles)")}
         if "username" not in columns:
             con.execute("ALTER TABLE profiles ADD COLUMN username TEXT NOT NULL DEFAULT ''")
+        if "method" not in {row[1] for row in con.execute("PRAGMA table_info(outbox)")}:
+            con.execute("ALTER TABLE outbox ADD COLUMN method TEXT NOT NULL DEFAULT 'sendMessage'")
+        if "payload" not in {row[1] for row in con.execute("PRAGMA table_info(prompts)")}:
+            con.execute("ALTER TABLE prompts ADD COLUMN payload TEXT NOT NULL DEFAULT '{}'")
 
 
 def telegram(method, payload):
@@ -135,8 +152,44 @@ def state(con, user_id):
     profile = dict(con.execute("SELECT * FROM profiles WHERE user_id=?", (user_id,)).fetchone())
     rows = con.execute("SELECT id,kind,payload,created_at FROM events WHERE user_id=? "
                        "ORDER BY created_at DESC,rowid DESC LIMIT 20", (user_id,)).fetchall()
+    own = owned_character(con, profile)
+    requests = [dict(row) for row in con.execute("SELECT id,kind,recipient_name,degree,status,created_at FROM requests WHERE user_id=? ORDER BY created_at DESC,rowid DESC LIMIT 20", (user_id,))]
     return {"profile": {k: profile[k] for k in ("name", "character", "degree", "access_level")},
+            "own_character": public_character(own) if own else None,
+            "characters": [public_character(item) for item in ROSTER.entries.values()],
+            "requests": requests, "gm_connected": bool(setting(con, "gm_chat_id")),
             "events": [{**dict(row), "payload": json.loads(row["payload"])} for row in rows]}
+
+
+def public_character(item):
+    return {key: item[key] for key in ("name", "class", "degree", "eligible")}
+
+
+def setting(con, key):
+    row = con.execute("SELECT value FROM settings WHERE key=?", (key,)).fetchone()
+    return json.loads(row[0]) if row else None
+
+
+def set_setting(con, key, value):
+    con.execute("INSERT INTO settings VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", (key, json.dumps(value, ensure_ascii=False)))
+
+
+def owned_character(con, profile):
+    item = ROSTER.get(profile["character"])
+    if not item:
+        return None
+    if item["username"] or item["telegram_id"]:
+        return item if account_matches(item, {"id": profile["user_id"], "username": profile["username"]}) else None
+    bound = con.execute("SELECT user_id FROM bindings WHERE character_key=?", (item["key"],)).fetchone()
+    return item if bound and bound[0] == profile["user_id"] else None
+
+
+def require_character(con, user_id):
+    profile = con.execute("SELECT * FROM profiles WHERE user_id=?", (user_id,)).fetchone()
+    own = owned_character(con, profile)
+    if not own:
+        raise ValueError("Сначала зарегистрируйте своего персонажа. Имя должно быть подтверждено в реестре или ГМ.")
+    return own
 
 
 def dose_journal_csv(con):
@@ -149,6 +202,8 @@ def dose_journal_csv(con):
         taken_at = payload.get("taken_at") or time.strftime("%d.%m.%Y %H:%M:%S", time.gmtime(row["created_at"] + 7 * 3600))
         units = payload["units"]
         dose = f"{units} {'единица' if units == 1 else 'единицы'} · {ROMAN[payload['degree']]} степень"
+        if payload.get("for_companion"):
+            dose += f" · для {payload['recipient']}"
         writer.writerow([username, dose, taken_at])
     return stream.getvalue().encode("utf-8")
 
@@ -167,6 +222,7 @@ def app_button(label="Открыть робота", query=""):
 
 def home_keyboard():
     rows = [[cb("Получить мистериум", "mysterium")],
+            [cb("Взять для товарища", "companion")],
             [cb("Повысить доступ", "access"), cb("Задать вопрос", "faq")],
             [cb("Мой журнал", "history"), cb("Имя персонажа", "character")]]
     if APP_URL:
@@ -174,17 +230,23 @@ def home_keyboard():
     return keyboard(rows)
 
 
-def queue(con, user_id, text, markup=None):
+def queue(con, user_id, text, markup=None, thread_id=None):
     payload = {"chat_id": user_id, "text": text, "parse_mode": "HTML"}
     if markup:
         payload["reply_markup"] = markup
+    if thread_id:
+        payload["message_thread_id"] = thread_id
     con.execute("INSERT INTO outbox(user_id,payload) VALUES(?,?)", (user_id, json.dumps(payload, ensure_ascii=False)))
 
 
-def new_prompt(con, user_id, kind):
+def queue_call(con, user_id, method, payload):
+    con.execute("INSERT INTO outbox(user_id,payload,method) VALUES(?,?,?)", (user_id, json.dumps(payload, ensure_ascii=False), method))
+
+
+def new_prompt(con, user_id, kind, payload=None):
     key = secrets.token_hex(6)
-    con.execute("INSERT INTO prompts(id,user_id,kind,created_at) VALUES(?,?,?,?)",
-                (key, user_id, kind, int(time.time())))
+    con.execute("INSERT INTO prompts(id,user_id,kind,created_at,payload) VALUES(?,?,?,?,?)",
+                (key, user_id, kind, int(time.time()), json.dumps(payload or {}, ensure_ascii=False)))
     return key
 
 
@@ -197,7 +259,7 @@ def consume_prompt(con, key, user_id, kind):
     return True
 
 
-def issue(con, user_id, degree, key, notify=True):
+def issue(con, user_id, degree, key, notify=True, recipient=None, for_companion=False):
     if type(degree) is not int or degree not in ROMAN:
         raise ValueError("Выберите степень I, II или III.")
     old = con.execute("SELECT id,payload,created_at FROM events WHERE user_id=? AND kind='dispense' AND request_key=?",
@@ -210,6 +272,8 @@ def issue(con, user_id, degree, key, notify=True):
     payload = {"degree": degree, "units": degree, "telegram_username": username,
                "taken_at": time.strftime("%d.%m.%Y %H:%M:%S", time.gmtime(now + 7 * 3600)),
                "timezone": "Asia/Tomsk"}
+    if recipient:
+        payload.update({"recipient": recipient, "for_companion": for_companion})
     con.execute("INSERT INTO events VALUES(?,?,?,?,?,?)", (event_id, user_id, "dispense", json.dumps(payload), now, key))
     con.execute("UPDATE profiles SET degree=?,updated_at=? WHERE user_id=?", (degree, now, user_id))
     who = html.escape(profile["character"] or profile["name"])
@@ -219,14 +283,162 @@ def issue(con, user_id, degree, key, notify=True):
         f"Внутри корпуса Протектрона негромко потрескивает реле. «{who}. Степень гулификации {ROMAN[degree]} зафиксирована». Робот отводит запор контейнера, и поднявшаяся крышка открывает подготовленную кассету. «Пожалуйста, соблюдайте интервал приёма».",
     ]
     text = texts[int(event_id[:4], 16) % len(texts)]
+    if for_companion:
+        text = f"«Рапорт согласован. Подготавливаю полную дозу для {html.escape(recipient)}: степень {ROMAN[degree]}». Протектрон освобождает замок контейнера; крышка поднимается, открывая кассету с препаратом. «Препарат доступен к получению»."
     unit_word = "единица" if degree == 1 else "единицы"
     text += f"\n\n<b>Мистериум: {degree} {unit_word} — одна полная доза.</b>\nПолучение препарата не фиксирует его приём."
+    if for_companion:
+        text += f"\n<b>Получатель: {html.escape(recipient)}.</b> Выдача разрешена по согласованному рапорту."
     rows = [[cb("Инструкция по приёму", "faq:interval")], [cb("Вернуться к контроллеру", "home")]]
     if APP_URL:
         rows.insert(0, [app_button("Посмотреть выдачу", f"?receipt={event_id}")])
     if notify:
         queue(con, user_id, text, keyboard(rows))
     return {"id": event_id, **payload, "created_at": now, "repeated": False}
+
+
+def self_issue(con, user_id, key, notify=True):
+    own = require_character(con, user_id)
+    if not own["eligible"]:
+        raise ValueError("Личная выдача мистериума недоступна для вашего класса или степени в реестре. Для товарища можно подать рапорт.")
+    return issue(con, user_id, own["degree"], key, notify, own["name"])
+
+
+def report_message(con, request):
+    profile = con.execute("SELECT * FROM profiles WHERE user_id=?", (request["user_id"],)).fetchone()
+    actor = "@" + profile["username"] if profile["username"] else f"ID:{request['user_id']}"
+    title = "ПРИВЯЗКА ПЕРСОНАЖА" if request["kind"] == "registration" else "ВЫДАЧА МИСТЕРИУМА ТОВАРИЩУ"
+    text = f"<b>{title}</b>\n\nИгрок: <a href=\"tg://user?id={request['user_id']}\">{html.escape(actor)}</a>\nПерсонаж игрока: {html.escape(profile['character'] or 'не зарегистрирован')}\n"
+    text += f"{'Имя для регистрации' if request['kind']=='registration' else 'Получатель'}: <b>{html.escape(request['recipient_name'])}</b>\n"
+    if request["degree"]:
+        text += f"Степень: {ROMAN[request['degree']]} · полная доза: {request['degree']} ед.\n"
+    if request["report"]:
+        text += f"\n<b>Рапорт:</b>\n{html.escape(request['report'])}"
+    return text
+
+
+def send_gm_report(con, request):
+    chat_id = setting(con, "gm_chat_id")
+    if not chat_id:
+        raise ValueError("Чат ГМ ещё не привязан. Обратитесь к администрации.")
+    queue(con, chat_id, report_message(con, request), keyboard([[cb("Согласовать", "gm:approve:" + request["id"]), cb("Отклонить", "gm:reject:" + request["id"])]]), setting(con, "gm_thread_id"))
+
+
+def register_character(con, user_id, name, source="chat"):
+    entry = ROSTER.get(name)
+    if not entry:
+        raise ValueError("Такого персонажа нет в реестре. Проверьте имя или обратитесь к ГМ.")
+    profile = con.execute("SELECT * FROM profiles WHERE user_id=?", (user_id,)).fetchone()
+    user = {"id": user_id, "username": profile["username"]}
+    if entry["username"] or entry["telegram_id"]:
+        if not account_matches(entry, user):
+            raise ValueError("Этот персонаж привязан к другому Telegram-аккаунту.")
+        con.execute("UPDATE profiles SET character=?,pending='' WHERE user_id=?", (entry["name"], user_id))
+        return "verified"
+    existing = con.execute("SELECT user_id FROM bindings WHERE character_key=?", (entry["key"],)).fetchone()
+    if existing:
+        if existing[0] != user_id:
+            raise ValueError("Этот персонаж уже зарегистрирован другим игроком.")
+        con.execute("UPDATE profiles SET character=?,pending='' WHERE user_id=?", (entry["name"], user_id))
+        return "verified"
+    old = con.execute("SELECT id FROM requests WHERE user_id=? AND kind='registration' AND character_key=? AND status='pending'", (user_id, entry["key"])).fetchone()
+    if old:
+        return "pending"
+    if not setting(con, "gm_chat_id"):
+        raise ValueError("Для первой регистрации нужен ГМ. Чат согласования ещё не привязан.")
+    request_id = uuid.uuid4().hex
+    con.execute("INSERT INTO requests(id,kind,user_id,character_key,recipient_name,degree,report,source,created_at,request_key) VALUES(?,?,?,?,?,?,?,?,?,?)",
+                (request_id, "registration", user_id, entry["key"], entry["name"], entry["degree"], "Подтверждение владельца персонажа: в реестре пока не указан Telegram-аккаунт.", source, int(time.time()), request_id))
+    con.execute("UPDATE profiles SET pending='' WHERE user_id=?", (user_id,))
+    send_gm_report(con, con.execute("SELECT * FROM requests WHERE id=?", (request_id,)).fetchone())
+    return "pending"
+
+
+def companion_request(con, user_id, name, report, key, source="chat"):
+    own = require_character(con, user_id)
+    recipient = ROSTER.get(name)
+    if not recipient or not recipient["eligible"]:
+        raise ValueError("Получатель должен быть гулем с указанной в реестре степенью.")
+    if recipient["key"] == own["key"]:
+        raise ValueError("Для своего персонажа используйте личную выдачу.")
+    report = str(report).strip()
+    if not 5 <= len(report) <= 1200:
+        raise ValueError("Опишите ситуацию рапортом длиной от 5 до 1200 символов.")
+    old = con.execute("SELECT * FROM requests WHERE user_id=? AND kind='companion' AND request_key=?", (user_id, key)).fetchone()
+    if old:
+        return dict(old)
+    request_id = uuid.uuid4().hex
+    con.execute("INSERT INTO requests(id,kind,user_id,character_key,recipient_name,degree,report,source,created_at,request_key) VALUES(?,?,?,?,?,?,?,?,?,?)",
+                (request_id, "companion", user_id, recipient["key"], recipient["name"], recipient["degree"], report, source, int(time.time()), key))
+    request = con.execute("SELECT * FROM requests WHERE id=?", (request_id,)).fetchone()
+    send_gm_report(con, request)
+    return dict(request)
+
+
+def collect_companion(con, user_id, request_id, notify=True):
+    require_character(con, user_id)
+    request = con.execute("SELECT * FROM requests WHERE id=? AND kind='companion' AND user_id=?", (request_id, user_id)).fetchone()
+    if not request or request["status"] not in ("approved", "issued"):
+        raise ValueError("Эта выдача не согласована ГМ.")
+    key = "companion:" + request_id
+    if request["status"] == "issued":
+        old = con.execute("SELECT id,payload,created_at FROM events WHERE user_id=? AND kind='dispense' AND request_key=?", (user_id, key)).fetchone()
+        if not old:
+            raise ValueError("Выдача уже закрыта")
+        return {"id": old["id"], **json.loads(old["payload"]), "created_at": old["created_at"], "repeated": True}
+    recipient = ROSTER.get(request["recipient_name"])
+    if not recipient or not recipient["eligible"] or recipient["degree"] != request["degree"]:
+        raise ValueError("Данные получателя изменились в реестре. Требуется новый рапорт.")
+    result = issue(con, user_id, recipient["degree"], key, notify, recipient["name"], True)
+    con.execute("UPDATE requests SET status='issued' WHERE id=? AND status='approved'", (request_id,))
+    return result
+
+
+def is_gm(con, user):
+    if con.execute("SELECT 1 FROM gm_accounts WHERE user_id=?", (user["id"],)).fetchone():
+        return True
+    name = str(user.get("username", "")).casefold()
+    if name not in GM_USERNAMES:
+        return False
+    other = con.execute("SELECT user_id FROM gm_accounts WHERE username=?", (name,)).fetchone()
+    if other and other[0] != user["id"]:
+        return False
+    con.execute("INSERT OR IGNORE INTO gm_accounts VALUES(?,?)", (user["id"], name))
+    return True
+
+
+def decide_request(con, user, request_id, decision):
+    if not is_gm(con, user) or decision not in ("approve", "reject"):
+        raise ValueError("Согласование доступно только указанным ГМ.")
+    request = con.execute("SELECT * FROM requests WHERE id=?", (request_id,)).fetchone()
+    if not request or request["status"] != "pending":
+        raise ValueError("Этот рапорт уже рассмотрен.")
+    if decision == "approve":
+        entry = ROSTER.get(request["recipient_name"])
+        if not entry:
+            raise ValueError("Получателя больше нет в реестре.")
+        if request["kind"] == "registration":
+            profile = con.execute("SELECT * FROM profiles WHERE user_id=?", (request["user_id"],)).fetchone()
+            if (entry["username"] or entry["telegram_id"]) and not account_matches(entry, {"id": request["user_id"], "username": profile["username"]}):
+                raise ValueError("Аккаунт не совпадает с указанным в реестре.")
+            existing = con.execute("SELECT user_id FROM bindings WHERE character_key=?", (entry["key"],)).fetchone()
+            if existing and existing[0] != request["user_id"]:
+                raise ValueError("Персонаж уже зарегистрирован другим игроком.")
+            con.execute("DELETE FROM bindings WHERE user_id=?", (request["user_id"],))
+            con.execute("INSERT OR REPLACE INTO bindings VALUES(?,?,?)", (entry["key"], request["user_id"], int(time.time())))
+            con.execute("UPDATE profiles SET character=?,pending='' WHERE user_id=?", (entry["name"], request["user_id"]))
+        elif not entry["eligible"] or entry["degree"] != request["degree"]:
+            raise ValueError("Дозировка получателя изменилась. Попросите новый рапорт.")
+    status = "approved" if decision == "approve" else "rejected"
+    con.execute("UPDATE requests SET status=?,decided_by=? WHERE id=? AND status='pending'", (status, user["id"], request_id))
+    if request["source"] == "chat":
+        if request["kind"] == "registration":
+            queue(con, request["user_id"], "«Регистрация персонажа подтверждена. Контроллер готов к обслуживанию»." if status == "approved" else "«Регистрация отклонена ГМ. Уточните данные персонажа».", home_keyboard())
+        else:
+            rows = [[cb("Получить согласованную дозу", "collect:" + request_id)]] if status == "approved" else []
+            rows.append([cb("Вернуться", "home")])
+            queue(con, request["user_id"], f"«Рапорт для {html.escape(request['recipient_name'])} {'согласован' if status=='approved' else 'отклонён'} ГМ»." + (" Подготовлена одна полная доза; получение нужно подтвердить кнопкой." if status == "approved" else ""), keyboard(rows))
+    return status, request
 
 
 def test_url(target):
@@ -259,6 +471,145 @@ def access_request(con, user_id, target, key, notify=True):
 
 
 def handle_update(update):
+    callback = update.get("callback_query")
+    message = callback.get("message", {}) if callback else update.get("message", {})
+    user = callback.get("from", {}) if callback else message.get("from", {})
+    chat = message.get("chat", {})
+    if not user.get("id") or user.get("is_bot"):
+        return
+    data = callback.get("data", "") if callback else ""
+    text = message.get("text", "").strip() if not callback else ""
+    command = text.split(maxsplit=1)[0].split("@")[0] if text else ""
+    if chat.get("type") in ("group", "supergroup"):
+        if command != "/bind_gm" and not data.startswith("gm:"):
+            return
+        if callback:
+            try:
+                telegram("answerCallbackQuery", {"callback_query_id": callback["id"]})
+            except RuntimeError:
+                pass
+        try:
+            if data.startswith("gm:approve:"):
+                ROSTER.refresh()
+            with db() as con:
+                con.execute("BEGIN IMMEDIATE")
+                if con.execute("SELECT 1 FROM updates WHERE id=?", (update["update_id"],)).fetchone():
+                    return
+                if command == "/bind_gm":
+                    supplied = text.split(maxsplit=1)[1].strip() if len(text.split(maxsplit=1)) == 2 else ""
+                    if not GM_BIND_CODE or not hmac.compare_digest(supplied, GM_BIND_CODE) or not is_gm(con, user):
+                        return
+                    bound = setting(con, "gm_chat_id")
+                    if bound and bound != chat["id"]:
+                        queue(con, chat["id"], "Чат ГМ уже привязан к другой группе. Для изменения обратитесь к владельцу бота.", thread_id=message.get("message_thread_id"))
+                    else:
+                        set_setting(con, "gm_chat_id", chat["id"])
+                        set_setting(con, "gm_thread_id", message.get("message_thread_id"))
+                        set_setting(con, "gm_chat_title", chat.get("title", "ГМ"))
+                        queue(con, chat["id"], "<b>Чат ГМ привязан.</b>\nРапорты и запросы первой регистрации будут приходить сюда. Согласовывать могут только @VaultTecGm и @gj0xl.", thread_id=message.get("message_thread_id"))
+                else:
+                    if chat["id"] != setting(con, "gm_chat_id") or (setting(con, "gm_thread_id") and message.get("message_thread_id") != setting(con, "gm_thread_id")):
+                        return
+                    _, decision, request_id = data.split(":")
+                    status, request = decide_request(con, user, request_id, decision)
+                    decision_by = "@" + str(user.get("username", user["id"]))
+                    original = report_message(con, request)
+                    original += f"\n\n<b>{'СОГЛАСОВАНО' if status=='approved' else 'ОТКЛОНЕНО'}</b> · {html.escape(decision_by)}"
+                    queue_call(con, chat["id"], "editMessageText", {"chat_id": chat["id"], "message_id": message["message_id"], "text": original, "parse_mode": "HTML", "reply_markup": keyboard([])})
+                con.execute("INSERT INTO updates VALUES(?,?)", (update["update_id"], int(time.time())))
+        except (ValueError, KeyError) as exc:
+            if callback:
+                try:
+                    telegram("answerCallbackQuery", {"callback_query_id": callback["id"], "text": str(exc)[:180], "show_alert": True})
+                except RuntimeError:
+                    pass
+        return
+    if chat.get("type") != "private" or chat.get("id") != user["id"]:
+        return
+    with db() as con:
+        upsert_profile(con, user)
+        profile = con.execute("SELECT * FROM profiles WHERE user_id=?", (user["id"],)).fetchone()
+        pending = profile["pending"]
+    clinical = command in ("/start", "/menu", "/mysterium", "/cancel", "/refresh_roster") or data in ("home", "mysterium", "companion", "character") or data.startswith(("degree:", "self:", "buddy:", "collect:")) or (bool(text) and not text.startswith("/") and (pending.startswith("report:") or pending in ("register", "character")))
+    if not clinical:
+        try:
+            if command == "/access" or data.startswith("access"):
+                ROSTER.refresh()
+            return handle_private_update(update)
+        except ValueError as exc:
+            with db() as con:
+                queue(con, user["id"], "«" + html.escape(str(exc)) + "»", home_keyboard())
+            return
+    if callback:
+        try:
+            telegram("answerCallbackQuery", {"callback_query_id": callback["id"]})
+        except RuntimeError:
+            pass
+    try:
+        ROSTER.refresh(force=command == "/refresh_roster")
+        with db() as con:
+            con.execute("BEGIN IMMEDIATE")
+            if con.execute("SELECT 1 FROM updates WHERE id=?", (update["update_id"],)).fetchone():
+                return
+            upsert_profile(con, user)
+            profile = con.execute("SELECT * FROM profiles WHERE user_id=?", (user["id"],)).fetchone()
+            own = owned_character(con, profile)
+            if command == "/refresh_roster":
+                if not is_gm(con, user):
+                    return
+                queue(con, user["id"], "Реестр перечитан. Классы, степени и привязки актуальны.", home_keyboard())
+            elif data == "character" or (not own and (command in ("/start", "/menu", "/mysterium", "/cancel") or data in ("home", "mysterium", "companion"))):
+                con.execute("UPDATE profiles SET pending='register' WHERE user_id=?", (user["id"],))
+                queue(con, user["id"], "Протектрон поднимает оптический модуль. «Для проверки права на обслуживание назовите вашего персонажа — так, как он записан в реестре».\n\nЕсли аккаунт ещё не указан в реестре, первую привязку подтвердит ГМ.", {"force_reply": True, "input_field_placeholder": "Имя персонажа"})
+            elif text and not text.startswith("/") and profile["pending"] in ("register", "character"):
+                result = register_character(con, user["id"], text)
+                queue(con, user["id"], "«Имя проверено. Контроллер готов к обслуживанию»." if result == "verified" else "«Запрос на первую привязку отправлен ГМ. Обслуживание откроется после подтверждения владельца персонажа».", home_keyboard() if result == "verified" else keyboard([[cb("Проверить статус", "home")]]))
+            elif command in ("/start", "/menu", "/cancel") or data == "home":
+                con.execute("UPDATE profiles SET pending='' WHERE user_id=?", (user["id"],))
+                queue(con, user["id"], f"«{html.escape(own['name'])}. Данные реестра проверены. Укажите цель обращения».", home_keyboard())
+            elif command == "/mysterium" or data == "mysterium" or data.startswith("degree:"):
+                own = require_character(con, user["id"])
+                if not own["eligible"]:
+                    raise ValueError("Личная выдача мистериума недоступна для вашего класса или степени в реестре. Для товарища можно подать рапорт.")
+                prompt = new_prompt(con, user["id"], "self-dose")
+                queue(con, user["id"], f"«{html.escape(own['name'])}. По реестру степень гулификации {ROMAN[own['degree']]}. Полная доза — {own['degree']} ед. Контейнер подготовлен».", keyboard([[cb("Получить свою дозу", "self:" + prompt)], [cb("Взять для товарища", "companion")], [cb("Вернуться", "home")]]))
+            elif data.startswith("self:"):
+                key = data.split(":", 1)[1]
+                if not consume_prompt(con, key, user["id"], "self-dose"):
+                    raise ValueError("Эта выдача уже обработана либо устарела.")
+                self_issue(con, user["id"], "bot:" + key)
+            elif data == "companion":
+                own = require_character(con, user["id"])
+                candidates = [item for item in ROSTER.entries.values() if item["eligible"] and item["key"] != own["key"]]
+                if not candidates:
+                    raise ValueError("В реестре нет другого персонажа с доступной дозой мистериума.")
+                prompt = new_prompt(con, user["id"], "buddy-picker", {"names": [item["name"] for item in candidates]})
+                queue(con, user["id"], "«Укажите товарища, для которого требуется препарат. Дозировка будет взята из реестра».", keyboard([[cb(item["name"], f"buddy:{prompt}:{index}")] for index, item in enumerate(candidates)] + [[cb("Вернуться", "home")]]))
+            elif data.startswith("buddy:"):
+                _, key, index = data.split(":")
+                prompt = con.execute("SELECT payload FROM prompts WHERE id=? AND user_id=?", (key, user["id"])).fetchone()
+                if not prompt or not consume_prompt(con, key, user["id"], "buddy-picker"):
+                    raise ValueError("Выбор получателя устарел. Начните рапорт заново.")
+                names = json.loads(prompt[0])["names"]
+                i = int(index)
+                if not 0 <= i < len(names):
+                    raise ValueError("Выберите получателя из списка")
+                name = names[i]
+                con.execute("UPDATE profiles SET pending=? WHERE user_id=?", ("report:" + name, user["id"]))
+                queue(con, user["id"], f"«Для выдачи препарата товарищу {html.escape(name)} составьте короткий рапорт: почему требуется получить дозу за него».\n\nОтправьте описание ситуации следующим сообщением — от 5 до 1200 символов.", {"force_reply": True, "input_field_placeholder": "Короткий рапорт"})
+            elif text and not text.startswith("/") and profile["pending"].startswith("report:"):
+                companion_request(con, user["id"], profile["pending"][7:], text, f"update:{update['update_id']}")
+                con.execute("UPDATE profiles SET pending='' WHERE user_id=?", (user["id"],))
+                queue(con, user["id"], "«Рапорт передан ГМ. Выдача станет доступна после согласования».", home_keyboard())
+            elif data.startswith("collect:"):
+                collect_companion(con, user["id"], data.split(":", 1)[1])
+            con.execute("INSERT INTO updates VALUES(?,?)", (update["update_id"], int(time.time())))
+    except (ValueError, KeyError, IndexError) as exc:
+        with db() as con:
+            queue(con, user["id"], "«" + html.escape(str(exc)) + "»", home_keyboard())
+
+
+def handle_private_update(update):
     message = update.get("message")
     callback = update.get("callback_query")
     if callback:
@@ -304,12 +655,14 @@ def handle_update(update):
                 queue(con, user_id, "«Этот запрос уже обработан либо устарел. Для новой выдачи начните обращение заново».",
                       keyboard([[cb("Получить мистериум", "mysterium")], [cb("Вернуться", "home")]]))
         elif text.startswith("/access") or data == "access":
+            require_character(con, user_id)
             prompt = new_prompt(con, user_id, "access-service")
             choices = [cb(f"{item['code']} · {item['name']}", f"accessservice:{prompt}:{item['code']}") for item in ACCESS_CATALOG["services"]]
             queue(con, user_id, "На панели Протектрона загорается индикатор допуска. «Уточните, какой именно доступ "
                   "вам требуется повысить».\n\n<b>Выберите службу:</b>",
                   keyboard([choices[i:i + 2] for i in range(0, len(choices), 2)] + [[cb("Вернуться", "home")]]))
         elif data.startswith("accessservice:"):
+            require_character(con, user_id)
             try:
                 _, key, service = data.split(":")
                 if service not in ACCESS_SERVICES or not consume_prompt(con, key, user_id, "access-service"):
@@ -323,6 +676,7 @@ def handle_update(update):
             except ValueError:
                 queue(con, user_id, "«Выберите службу заново».", keyboard([[cb("Выбрать службу", "access")]]))
         elif data.startswith("accesslevel:"):
+            require_character(con, user_id)
             try:
                 _, key, service, value = data.split(":")
                 level = int(value)
@@ -387,7 +741,7 @@ def outbox_worker():
             if not row:
                 continue
             try:
-                telegram("sendMessage", json.loads(row["payload"]))
+                telegram(row["method"], json.loads(row["payload"]))
                 with db() as con:
                     con.execute("UPDATE outbox SET delivered=1 WHERE id=?", (row["id"],))
             except RuntimeError:
@@ -456,7 +810,9 @@ class Handler(BaseHTTPRequestHandler):
             self.wfile.write(content)
             return
         if path == "/health":
-            self.reply(200, {"ok": True, "bot_configured": bool(TOKEN and APP_URL)})
+            with db() as con:
+                connected = bool(setting(con, "gm_chat_id"))
+            self.reply(200, {"ok": True, "bot_configured": bool(TOKEN and APP_URL), "gm_connected": connected, "registry_ready": bool(ROSTER.entries)})
             return
         file = (PUBLIC / (path.lstrip("/") or "index.html")).resolve()
         if not file.is_relative_to(PUBLIC) or not file.is_file():
@@ -489,10 +845,15 @@ class Handler(BaseHTTPRequestHandler):
                 self.reply(200, {"ok": True})
                 return
             body = json.loads(self.rfile.read(length))
-            if path not in ("/api/state", "/api/dispense", "/api/access", "/api/profile", "/api/faq"):
+            if path not in ("/api/state", "/api/dispense", "/api/access", "/api/profile", "/api/faq", "/api/companion", "/api/collect"):
                 self.reply(404, {"error": "Unknown action"})
                 return
-            user = validate_init_data(str(body.get("initData", "")))
+            try:
+                user = validate_init_data(str(body.get("initData", "")))
+            except (ValueError, KeyError, TypeError):
+                self.reply(401, {"error": "Откройте робота заново из личного чата с ботом."})
+                return
+            ROSTER.refresh()
             with db() as con:
                 con.execute("BEGIN IMMEDIATE")
                 upsert_profile(con, user)
@@ -500,9 +861,10 @@ class Handler(BaseHTTPRequestHandler):
                     key = str(body.get("requestId", ""))
                     if not 8 <= len(key) <= 100:
                         raise ValueError("Недопустимый номер обращения")
-                    receipt = issue(con, user["id"], body.get("degree"), "app:" + key, notify=False)
+                    receipt = self_issue(con, user["id"], "app:" + key, notify=False)
                     result = {"receipt": receipt, **state(con, user["id"])}
                 elif path == "/api/access":
+                    require_character(con, user["id"])
                     key = str(body.get("requestId", ""))
                     if not 8 <= len(key) <= 100:
                         raise ValueError("Недопустимый номер обращения")
@@ -516,8 +878,17 @@ class Handler(BaseHTTPRequestHandler):
                     character = str(body.get("character", "")).strip()
                     if len(character) > 80:
                         raise ValueError("Имя: до 80 символов")
-                    con.execute("UPDATE profiles SET character=? WHERE user_id=?", (character, user["id"]))
-                    result = state(con, user["id"])
+                    status = register_character(con, user["id"], character, source="app")
+                    result = {"registration_status": status, **state(con, user["id"])}
+                elif path == "/api/companion":
+                    key = str(body.get("requestId", ""))
+                    if not 8 <= len(key) <= 100:
+                        raise ValueError("Недопустимый номер обращения")
+                    request = companion_request(con, user["id"], str(body.get("recipient", "")), body.get("report", ""), "app:" + key, source="app")
+                    result = {"request": {"id": request["id"], "status": request["status"]}, **state(con, user["id"])}
+                elif path == "/api/collect":
+                    receipt = collect_companion(con, user["id"], str(body.get("id", "")), notify=False)
+                    result = {"receipt": receipt, **state(con, user["id"])}
                 elif path == "/api/faq":
                     item = next((f for f in FAQ if f["id"] == body.get("id")), None)
                     if not item:
@@ -528,11 +899,22 @@ class Handler(BaseHTTPRequestHandler):
                 result["faq"] = FAQ
                 result["accesses"] = ACCESS_CATALOG
             self.reply(200, result)
-        except (ValueError, KeyError, TypeError, json.JSONDecodeError):
+        except ValueError as exc:
+            self.reply(400, {"error": str(exc)})
+        except (KeyError, TypeError):
             self.reply(400, {"error": "Не удалось обработать запрос. Откройте робота заново из личного чата с ботом."})
         except Exception as exc:
             print("Request:", type(exc).__name__, flush=True)
             self.reply(503, {"error": "Контроллер временно недоступен. Повторите обращение чуть позже."})
+
+
+def roster_worker():
+    while not STOP.is_set():
+        try:
+            ROSTER.refresh()
+        except ValueError:
+            print("Character registry temporarily unavailable", flush=True)
+        STOP.wait(60)
 
 
 def main():
@@ -542,6 +924,7 @@ def main():
     if TOKEN and APP_URL:
         threading.Thread(target=setup_bot, daemon=True).start()
         threading.Thread(target=outbox_worker, daemon=True).start()
+        threading.Thread(target=roster_worker, daemon=True).start()
     server = ThreadingHTTPServer(("0.0.0.0", int(os.environ.get("PORT", "8080"))), Handler)
     print("Controller HTTP server ready", flush=True)
     try:
