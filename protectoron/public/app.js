@@ -5,12 +5,12 @@ const real = Boolean(initData);
 const $ = id => document.getElementById(id);
 const roman = {1:'I',2:'II',3:'III'};
 const fallbackFaq = [
-  {id:'purpose',question:'Для чего нужен мистериум?',answer:'Мистериум необходим для поддержания контроля при гулификации. Количество препарата: I степень — 1 единица, II — 2 единицы, III — 3 единицы.'},
-  {id:'interval',question:'Как часто нужно принимать препарат?',answer:'Препарат необходимо принимать в полном назначенном количестве каждые 10 Ваших игровых ходов. Получение препарата не считается его приёмом.'},
+  {id:'purpose',question:'Для чего нужен мистериум?',answer:'Мистериум поддерживает контроль при гулификации, а необходимое количество препарата определяется её степенью: I — 1 единица, II — 2 единицы, III — 3 единицы.'},
+  {id:'interval',question:'Как часто нужно принимать препарат?',answer:'Препарат необходимо принимать в полном назначенном количестве каждые 10 Ваших игровых ходов; поскольку получение не считается приёмом, сам приём Вы отыгрываете отдельно.'},
   {id:'turn',question:'Что считается ходом?',answer:'Собственный игровой пост с действием, в том числе передвижением или отыгрышем реквеста. Обычные диалоги, спасброски, технические сообщения и дополнительные ответы не засчитываются.'},
   {id:'missed',question:'Что будет при пропуске приёма?',answer:'После первых 10 ходов без нового приёма препарата: следующие ходы 1–3 — помеха, на 4-м условия проверок могут быть изменены, на 5-м наступает полная потеря контроля над персонажем. Приём полного назначенного количества препарата восстанавливает контроль и сбрасывает счётчик.'},
-  {id:'access',question:'Как повысить доступ?',answer:'Выберите службу и нужный уровень полномочий. Повышение квалификации проводится через тест; ссылка будет добавлена позже. Уровни разных служб учитываются отдельно. Ω не является пятым уровнем и не выдаётся штатным сотрудникам.'},
-  {id:'materials',question:'Где найти материалы проекта?',answer:'Материалы проекта доступны в Telegram: https://t.me/dawnofthed3ad. Архив Starfield также доступен в справочном модуле.'}
+  {id:'access',question:'Как повысить доступ?',answer:'Выберите службу и нужный уровень полномочий, чтобы перейти к тесту на повышение квалификации; ссылка на испытание будет добавлена позже. Уровни разных служб учитываются отдельно, а Ω не является пятым уровнем и не выдаётся штатным сотрудникам.'},
+  {id:'materials',question:'Где найти материалы проекта?',answer:'Материалы проекта доступны в Telegram по ссылке https://t.me/dawnofthed3ad, а перейти в архив Starfield Вы можете через справочный модуль.'}
 ];
 let profile = {name:'Посетитель',character:'',degree:null,access_level:1};
 let events = [], degree = null, busy = false, opened = false, frame = 0;
@@ -54,7 +54,7 @@ async function api(path, data={}){
   if(!real) throw new Error('Откройте робота из личного чата с @ptotectoronbot.');
   let response;
   try {response=await fetch(`/api/${path}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({initData,...data}),signal:AbortSignal.timeout(20000)});}
-  catch {throw new Error('Нет связи с контроллером. Проверьте соединение и повторите обращение.');}
+  catch {throw new Error('Связь с контроллером прервалась; пожалуйста, проверьте соединение и повторите обращение.');}
   const result=await response.json();
   if(!response.ok)throw new Error(result.error||'Контроллер временно недоступен.');
   return result;
@@ -89,7 +89,7 @@ function sync(data){
 }
 function renderHistory(){
   const list=$('history-list');list.replaceChildren();
-  if(!events.length){const p=document.createElement('p');p.className='empty-state';p.textContent='Обращений пока нет. Выдачи и запросы на доступ появятся здесь.';list.append(p);return;}
+  if(!events.length){const p=document.createElement('p');p.className='empty-state';p.textContent='После Вашего первого обращения здесь появятся записи о выдаче препарата и запросах на повышение доступа.';list.append(p);return;}
   for(const event of events){
     const el=document.createElement('article');el.className='history-entry';
     const img=document.createElement('img');img.src=event.kind==='dispense'?'/assets/mysterium.webp':'/assets/terminal-cut.png';img.alt='';
@@ -101,12 +101,24 @@ function renderHistory(){
   }
 }
 function renderFaq(items){
-  const list=$('faq-list');list.replaceChildren();
-  for(const item of items){
-    const details=document.createElement('details'),summary=document.createElement('summary'),p=document.createElement('p');
-    summary.textContent=item.question;p.textContent=item.answer;p.className='faq-answer';
-    details.append(summary,p);list.append(details);
+  const list=$('faq-list');
+  const existing=new Map(Array.from(list.children,item=>[item.dataset.faqId,item]));
+  const retained=new Set();
+  for(const [index,item] of items.entries()){
+    let details=existing.get(item.id);
+    if(!details){
+      details=document.createElement('details');details.dataset.faqId=item.id;
+      const summary=document.createElement('summary'),answer=document.createElement('p');
+      answer.className='faq-answer';details.append(summary,answer);
+    }
+    const summary=details.querySelector('summary'),answer=details.querySelector('.faq-answer');
+    if(summary.textContent!==item.question)summary.textContent=item.question;
+    if(answer.textContent!==item.answer)answer.textContent=item.answer;
+    // Polling must retain the actual disclosure node, its open state and focus.
+    if(list.children[index]!==details)list.insertBefore(details,list.children[index]||null);
+    retained.add(item.id);
   }
+  for(const [id,details] of existing)if(!retained.has(id))details.remove();
 }
 function drawScene(){
   ctx.clearRect(0,0,640,320);ctx.imageSmoothingEnabled=false;
@@ -151,12 +163,12 @@ function showReceipt(receipt){
   $('receipt-dose').textContent=`${receipt.units} ${receipt.units===1?'единица':'единицы'} препарата`;
   if(receipt.for_companion)$('receipt-dose').textContent+=` · для ${receipt.recipient}`;
   $('scene-hint').textContent=`Степень ${roman[degree]} · выдача зафиксирована`;
-  $('robot-speech').textContent=receipt.for_companion?`«Рапорт согласован. Препарат для ${receipt.recipient} подготовлен».`:`«Степень гулификации ${roman[degree]}. Препарат подготовлен. Пожалуйста, соблюдайте интервал приёма».`;
+  $('robot-speech').textContent=receipt.for_companion?`«Выдача для ${receipt.recipient} согласована по Вашему рапорту, препарат подготовлен и доступен к получению».`:`«Препарат для ${roman[degree]} степени гулификации подготовлен в назначенном количестве; пожалуйста, соблюдайте установленный интервал приёма».`;
 }
 function selectDegree(value){
   degree=value;document.querySelectorAll('[data-degree]').forEach(button=>{const selected=Number(button.dataset.degree)===value;button.classList.toggle('selected',selected);button.setAttribute('aria-pressed',String(selected));});
   $('dispense-button').disabled=busy||!real;
-  $('robot-speech').textContent=`«Степень гулификации ${roman[value]} принята. Назначенное количество препарата — ${value} ${value===1?'единица':'единицы'}. Контейнер готов к выдаче».`;
+  $('robot-speech').textContent=`«Для ${roman[value]} степени гулификации назначено ${value} ${value===1?'единица':'единицы'} препарата, поэтому контейнер подготовлен к выдаче соответствующего количества».`;
   $('scene-hint').textContent=`Подготовлена дозировка для ${roman[value]} степени`;play('click');haptic();
 }
 document.querySelectorAll('[data-tab]').forEach(button=>button.addEventListener('click',()=>setTab(button.dataset.tab)));
@@ -180,7 +192,7 @@ $('again-button').addEventListener('click',()=>{
 async function requestAccess(target){
   if(busy||!real)return;busy=true;clearError();document.querySelectorAll('[data-access-level]').forEach(b=>b.disabled=true);
   if(!accessKey)accessKey=freshKey();
-  try{const data=await api('access',{target,requestId:accessKey});sync(data);accessKey=null;$('access-result').replaceChildren();const text=document.createElement('p');text.textContent=`«Выбран допуск ${target}. Повышение квалификации проводится через тест».`;$('access-result').append(text);
+  try{const data=await api('access',{target,requestId:accessKey});sync(data);accessKey=null;$('access-result').replaceChildren();const text=document.createElement('p');text.textContent=`«Для повышения квалификации и получения допуска ${target} необходимо пройти соответствующий тест».`;$('access-result').append(text);
     if(data.request.test_url){const link=document.createElement('a');link.href=data.request.test_url;link.target='_blank';link.rel='noopener noreferrer';link.textContent=`Пройти тест · ${target}`;$('access-result').append(link);}else{const note=document.createElement('p');note.textContent='Ссылка на тест для этого допуска будет добавлена позже.';$('access-result').append(note);}
     $('access-result').hidden=false;play('confirm');haptic('medium');}
   catch(e){showError(e.message);}finally{busy=false;document.querySelectorAll('[data-access-level]').forEach(b=>b.disabled=!real||!ownCharacter);}
@@ -195,7 +207,7 @@ function selectService(service){
   for(const level of accessCatalog.levels.filter(item=>item.level>1)){const button=document.createElement('button');button.type='button';button.className='choice-button';button.dataset.accessLevel=String(level.level);button.disabled=!real||!ownCharacter;const title=document.createElement('span'),sub=document.createElement('small'),arrow=document.createElement('span');title.textContent=`${service.code}-${level.level}`;sub.textContent=level.name;arrow.textContent='→';arrow.setAttribute('aria-hidden','true');button.append(title,sub,arrow);button.addEventListener('click',()=>requestAccess(`${service.code}-${level.level}`));list.append(button);}play('click');haptic();
 }
 $('change-service').addEventListener('click',()=>{if(busy)return;selectedService=null;accessKey=null;$('access-services').hidden=false;$('access-level-panel').hidden=true;$('access-result').hidden=true;$('access-code').textContent='—';play('click');});
-async function registerCharacter(name,statusId){const data=await api('profile',{character:name});sync(data);$(statusId).textContent=data.registration_status==='verified'?'Персонаж проверен. Обслуживание доступно.':'Укажите имя персонажа из реестра.';play('confirm');}
+async function registerCharacter(name,statusId){const data=await api('profile',{character:name});sync(data);$(statusId).textContent=data.registration_status==='verified'?'Данные реестра проверены, и Вы можете выбрать необходимое обслуживание.':'Укажите имя персонажа из реестра.';play('confirm');}
 $('profile-form').addEventListener('submit',async e=>{e.preventDefault();const button=e.currentTarget.querySelector('button');button.disabled=true;try{await registerCharacter($('character').value,'profile-status');}catch(error){showError(error.message);}finally{button.disabled=!real;}});
 $('registration-form').addEventListener('submit',async e=>{e.preventDefault();const button=e.currentTarget.querySelector('button');button.disabled=true;try{await registerCharacter($('registration-name').value,'registration-status');}catch(error){showError(error.message);}finally{button.disabled=!real;}});
 function renderRecipients(){
@@ -220,15 +232,15 @@ function updateWaiting(){
   const request=requests.find(item=>item.id===waitingRequestId);
   if(!request||request.status!=='pending'){
     if($('waiting-dialog').open)$('waiting-dialog').close();
-    $('companion-status').textContent=request?.status==='approved'?'Выдача «Мистериума» согласована. Препарат доступен к получению.':request?.status==='rejected'?'Выдача «Мистериума» не согласована.':'Состояние обращения обновлено.';
+    $('companion-status').textContent=request?.status==='approved'?'Выдача «Мистериума» согласована, и Вы можете подтвердить получение подготовленного препарата.':request?.status==='rejected'?'Выдача «Мистериума» не согласована.':'Состояние обращения обновлено.';
     waitingRequestId=null;
     return;
   }
-  $('robot-speech').textContent='«Ожидание согласования на выдачу «Мистериума». Пожалуйста, ожидайте».';
+  $('robot-speech').textContent='«Ваш рапорт принят на рассмотрение; пожалуйста, ожидайте завершения согласования на выдачу «Мистериума»».';
 }
 function renderRequests(){
   const list=$('requests-list');list.replaceChildren();
-  for(const request of requests.filter(item=>item.kind==='companion')){const card=document.createElement('article');card.className='request-card';const title=document.createElement('strong'),status=document.createElement('p');title.textContent=`Для ${request.recipient_name} · ${request.degree} ед.`;status.textContent={pending:'Ожидание согласования на выдачу «Мистериума»',approved:'Выдача «Мистериума» согласована. Препарат доступен к получению',rejected:'Выдача «Мистериума» не согласована',issued:'Препарат получен'}[request.status]||request.status;card.append(title,status);
+  for(const request of requests.filter(item=>item.kind==='companion')){const card=document.createElement('article');card.className='request-card';const title=document.createElement('strong'),status=document.createElement('p');title.textContent=`Для ${request.recipient_name} · ${request.degree} ед.`;status.textContent={pending:'Ожидание согласования на выдачу «Мистериума»',approved:'Выдача «Мистериума» согласована, и препарат доступен к получению',rejected:'Выдача «Мистериума» не согласована',issued:'Препарат получен'}[request.status]||request.status;card.append(title,status);
     if(request.status==='pending'){const button=document.createElement('button');button.type='button';button.className='secondary-button';button.textContent='Ожидайте';button.addEventListener('click',()=>showWaiting(request.id));card.append(button);}
     if(request.status==='approved'){const button=document.createElement('button');button.type='button';button.className='secondary-button';button.textContent='Получить препарат';button.addEventListener('click',async()=>{if(busy)return;busy=true;button.disabled=true;play('click');try{const data=await api('collect',{id:request.id});sync(data);degree=data.receipt.degree;$('companion-panel').hidden=true;setTab('dispense');await animateOpen();showReceipt(data.receipt);play('confirm');}catch(error){showError(error.message);button.disabled=false;}finally{busy=false;}});card.append(button);}list.append(card);
   }
@@ -236,14 +248,14 @@ function renderRequests(){
 }
 setInterval(async()=>{if(!real||busy||document.hidden||!requests.some(item=>item.status==='pending'||item.status==='approved'))return;try{sync(await api('state'));}catch{}},10000);
 async function loadSprites(){
-  await Promise.all(Object.entries({case:'box-cut.png',opening:'boxOpening-cut.png',robot:'robotSprite-cut.png',floor:'floor-cut.png',vial:'mysterium.webp'}).map(([key,file])=>new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>{sprites[key]=img;resolve();};img.onerror=()=>reject(new Error('Не удалось загрузить спрайты. Обновите робота.'));img.src=`/assets/${file}`;})));
+  await Promise.all(Object.entries({case:'box-cut.png',opening:'boxOpening-cut.png',robot:'robotSprite-cut.png',floor:'floor-cut.png',vial:'mysterium.webp'}).map(([key,file])=>new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>{sprites[key]=img;resolve();};img.onerror=()=>reject(new Error('Не удалось загрузить интерфейс робота; пожалуйста, откройте его заново.'));img.src=`/assets/${file}`;})));
   drawScene();
 }
 async function start(){
   updateSound();renderFaq(fallbackFaq);renderHistory();
   try{tg?.ready();tg?.expand();tg?.setHeaderColor('#141914');tg?.setBackgroundColor('#141914');if(tg?.isVersionAtLeast?.('7.10'))tg.setBottomBarColor('#141914');}catch{}
   try{await loadSprites();}catch(e){showError(e.message);}
-  try{accessCatalog=await(await fetch('/accesses.json')).json();renderAccesses();}catch{showError('Не удалось загрузить список служб. Обновите робота.');}
+  try{accessCatalog=await(await fetch('/accesses.json')).json();renderAccesses();}catch{showError('Не удалось загрузить список служб; пожалуйста, откройте робота заново.');}
   if(real){
     try{
       const data=await api('state');sync(data);$('connection-label').textContent=`На связи · ${profile.character||profile.name}`;

@@ -24,7 +24,7 @@ context.showWaiting(request.id);
 assert.equal(get('waiting-dialog').open,true);
 assert.equal(get('waiting-recipient').textContent,'Получатель: Цифер');
 context.updateWaiting();
-assert.match(get('robot-speech').textContent,/Ожидание согласования/);
+assert.match(get('robot-speech').textContent,/Ваш рапорт принят на рассмотрение/);
 request.status='approved';context.renderRequests();
 assert.equal(get('waiting-dialog').open,false);
 assert.equal(get('requests-list').children[0].children[2].textContent,'Получить препарат');
