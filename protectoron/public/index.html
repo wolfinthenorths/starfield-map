@@ -6,9 +6,9 @@
   <meta name="theme-color" content="#141914">
   <title>Робот · Протектрон Starfield</title>
   <link rel="icon" href="/assets/mysterium.webp" type="image/webp">
-  <link rel="stylesheet" href="/style.css">
-  <script src="https://telegram.org/js/telegram-web-app.js" defer></script>
-  <script src="/app.js" defer></script>
+  <link rel="stylesheet" href="/style.css?v=perks-1">
+  <script src="/telegram-web-app.js" defer></script>
+  <script src="/app.js?v=perks-1" defer></script>
 </head>
 <body>
   <main class="terminal">
@@ -17,8 +17,9 @@
       <button id="sound" class="sound-button" type="button" aria-pressed="false" aria-label="Включить звук">ЗВУК: ВЫКЛ.</button>
     </header>
     <div class="connection"><span class="led"></span><span id="connection-label">Подключение к контроллеру…</span><span class="connection-code">ЛИЧНОЕ ОБСЛУЖИВАНИЕ</span></div>
-    <nav class="tabs" aria-label="Разделы терминала">
+    <nav class="tabs" aria-label="Разделы робота">
       <button data-tab="dispense" class="active" aria-current="page">Выдача</button>
+      <button data-tab="perks">Перки</button>
       <button data-tab="access">Доступ</button>
       <button data-tab="faq">Справочник</button>
       <button data-tab="history">Журнал</button>
@@ -38,7 +39,7 @@
         <p id="registration-status" class="fine-print" aria-live="polite">Класс и количество препарата определяются по реестру.</p>
       </div>
       <div id="degree-panel" class="degree-panel" hidden>
-        <div class="own-card"><span class="eyebrow">ДАННЫЕ РЕЕСТРА</span><strong id="own-name"></strong><p id="own-details"></p></div>
+        <div class="own-card"><span class="eyebrow">ДАННЫЕ РЕЕСТРА</span><strong id="own-name"></strong><p id="own-details"></p><p id="own-development">Уровень и доступные очки навыков уточняются в реестре.</p></div>
         <button id="dispense-button" class="primary-button" disabled type="button"><span>Получить мистериум</span><span aria-hidden="true">→</span></button>
         <p id="own-dose-note" class="fine-print">Количество препарата определяется классом и степенью из реестра.</p>
         <button id="companion-open" class="secondary-button companion-open" type="button">Взять для товарища</button>
@@ -51,6 +52,19 @@
         <button id="again-button" class="secondary-button" type="button">Новое обращение</button>
       </div>
       <p class="notice">Получение препарата и его приём — отдельные действия. Действия Вашего персонажа Вы отыгрываете самостоятельно.</p>
+    </section>
+
+    <section id="perks" class="view" aria-labelledby="perks-title">
+      <div class="section-heading"><div><p class="eyebrow">МОДУЛЬ РАЗВИТИЯ</p><h1 id="perks-title">Перки персонажа</h1></div></div>
+      <div class="speech"><img src="/assets/robotSprite-cut.png" alt="" class="robot-avatar"><div><span class="eyebrow">КОНТРОЛЛЕР</span><p>«Выберите необходимую особую возможность. Перед оформлением я проверю Ваш баланс и уже полученные перки».</p></div></div>
+      <div class="own-card perk-account"><span class="eyebrow">ДАННЫЕ РЕЕСТРА</span><strong id="perk-character">Персонаж не указан</strong><div class="perk-stats"><div><span>Уровень персонажа</span><strong id="perk-level">—</strong></div><div><span>Доступно очков навыков</span><strong id="perk-points">—</strong></div></div><p id="perk-free-count">Бесплатные выборы за уровень: —</p><button id="perk-refresh" type="button" class="text-button">Обновить сведения</button><p id="perk-status" role="status" aria-live="polite" class="fine-print"></p></div>
+      <div id="perk-pending" class="inline-result" hidden><p>Проверяется результат предыдущего обращения. Повторная проверка использует тот же номер и не создаёт повторное списание.</p><button id="perk-retry" type="button" class="secondary-button">Проверить результат</button></div>
+      <div id="perk-result" class="inline-result" role="status" aria-live="polite" hidden></div>
+      <div id="perk-class" class="perk-class"></div>
+      <div class="perk-filters" role="group" aria-label="Разделы каталога"><button type="button" data-perk-filter="small" aria-pressed="true">Малые</button><button type="button" data-perk-filter="large" aria-pressed="false">Крупные</button><button type="button" data-perk-filter="owned" aria-pressed="false">Мои перки</button></div>
+      <p id="perk-empty" class="fine-print" hidden>Пока Вы не выбрали дополнительные перки. Классовая возможность показана отдельно выше.</p>
+      <div id="perk-catalog" class="perk-catalog"></div>
+      <p class="notice">Развитие оформляется после сцены или этапа, вне боя. За каждое повышение уровня доступен один бесплатный малый перк; дополнительные малые и крупные перки приобретаются за очки навыков. Активные перки применяются один раз за главу, а в новой главе доступны снова — повторная покупка не нужна.</p>
     </section>
 
     <section id="access" class="view" aria-labelledby="access-title">
@@ -87,6 +101,14 @@
     <p id="waiting-recipient" class="fine-print"></p>
     <p id="waiting-note" class="fine-print">Результат появится здесь после завершения проверки. Вы можете свернуть окно — рапорт останется на рассмотрении.</p>
     <button id="waiting-minimize" class="secondary-button" type="button">Свернуть</button>
+  </dialog>
+  <dialog id="perk-dialog" class="waiting-dialog perk-dialog" aria-labelledby="perk-dialog-title" aria-describedby="perk-dialog-summary">
+    <img id="perk-dialog-image" class="perk-confirm-image" alt="">
+    <span class="eyebrow">ПОДТВЕРЖДЕНИЕ ПОЛУЧЕНИЯ</span><h2 id="perk-dialog-title"></h2>
+    <p id="perk-dialog-summary"></p><p id="perk-dialog-character" class="fine-print"></p>
+    <label id="perk-scene-label" class="perk-check"><input id="perk-scene-confirm" type="checkbox"><span>Сцена или этап завершены; развитие оформляется вне боя.</span></label>
+    <button id="perk-confirm" class="primary-button" type="button" disabled>Подтвердить</button>
+    <button id="perk-cancel" class="text-button" type="button">Отмена</button>
   </dialog>
 </body>
 </html>

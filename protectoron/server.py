@@ -21,6 +21,8 @@ from pathlib import Path
 from roster import Roster, normalize
 from backups import Backups
 from sheets import SheetsBridge
+from sheets import SheetsError, BUSINESS_ERRORS
+import perks
 
 ROOT = Path(__file__).resolve().parent
 PUBLIC = ROOT / "public"
@@ -102,6 +104,7 @@ def init_db():
             con.execute("ALTER TABLE outbox ADD COLUMN method TEXT NOT NULL DEFAULT 'sendMessage'")
         if "payload" not in {row[1] for row in con.execute("PRAGMA table_info(prompts)")}:
             con.execute("ALTER TABLE prompts ADD COLUMN payload TEXT NOT NULL DEFAULT '{}'")
+        perks.initialize(con)
 
 
 def telegram(method, payload):
@@ -226,6 +229,7 @@ def home_keyboard():
             [cb("Повысить доступ", "access"), cb("Задать вопрос", "faq")],
             [cb("Мой журнал", "history"), cb("Имя персонажа", "character")]]
     if APP_URL:
+        rows.append([app_button("Перки персонажа", "?view=perks")])
         rows.append([app_button()])
     return keyboard(rows)
 
@@ -551,6 +555,14 @@ def handle_update(update):
         return
     if chat.get("type") != "private" or chat.get("id") != user["id"]:
         return
+    if command == "/perks":
+        with db() as con:
+            if con.execute("SELECT 1 FROM updates WHERE id=?", (update["update_id"],)).fetchone():
+                return
+            upsert_profile(con, user)
+            queue(con, user["id"], "«Откройте модуль развития, чтобы проверить Ваш уровень, доступные очки навыков и полученные перки; покупка и бесплатный выбор за уровень оформляются отдельно».", keyboard([[app_button("Перки персонажа", "?view=perks")]]))
+            con.execute("INSERT INTO updates VALUES(?,?)", (update["update_id"], int(time.time())))
+        return
     with db() as con:
         upsert_profile(con, user)
         profile = con.execute("SELECT * FROM profiles WHERE user_id=?", (user["id"],)).fetchone()
@@ -787,6 +799,7 @@ def setup_bot():
                 {"command": "start", "description": "Обратиться к контроллеру"},
                 {"command": "mysterium", "description": "Получить мистериум"},
                 {"command": "access", "description": "Запросить повышение доступа"},
+                {"command": "perks", "description": "Перки, уровень и очки навыков"},
                 {"command": "help", "description": "Справочный модуль"},
                 {"command": "history", "description": "Журнал обращений"}]})
             telegram("setMyDescription", {"description": "Протектрон-контроллер Starfield. Выдача мистериума по степени гулификации, запросы на повышение доступа и справочный модуль. Обслуживание в личном чате."})
@@ -814,7 +827,11 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Cache-Control", "no-store")
         self.send_header("X-Content-Type-Options", "nosniff")
         self.end_headers()
-        self.wfile.write(content)
+        if self.command != "HEAD":
+            self.wfile.write(content)
+
+    def do_HEAD(self):
+        self.do_GET()
 
     def do_GET(self):
         path = urllib.parse.urlparse(self.path).path
@@ -832,7 +849,8 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header("X-Content-Type-Options", "nosniff")
             self.send_header("Referrer-Policy", "no-referrer")
             self.end_headers()
-            self.wfile.write(content)
+            if self.command != "HEAD":
+                self.wfile.write(content)
             return
         if path == "/health":
             with db() as con:
@@ -852,7 +870,8 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Referrer-Policy", "no-referrer")
         self.send_header("Content-Security-Policy", "default-src 'self'; script-src 'self' https://telegram.org; style-src 'self'; img-src 'self' data:; media-src 'self'; connect-src 'self'; frame-ancestors https://web.telegram.org https://*.telegram.org")
         self.end_headers()
-        self.wfile.write(content)
+        if self.command != "HEAD":
+            self.wfile.write(content)
 
     def do_POST(self):
         try:
@@ -870,7 +889,7 @@ class Handler(BaseHTTPRequestHandler):
                 self.reply(200, {"ok": True})
                 return
             body = json.loads(self.rfile.read(length))
-            if path not in ("/api/state", "/api/dispense", "/api/access", "/api/profile", "/api/faq", "/api/companion", "/api/collect"):
+            if path not in ("/api/state", "/api/dispense", "/api/access", "/api/profile", "/api/faq", "/api/companion", "/api/collect", "/api/perks", "/api/perk-acquire"):
                 self.reply(404, {"error": "Unknown action"})
                 return
             try:
@@ -879,6 +898,32 @@ class Handler(BaseHTTPRequestHandler):
                 self.reply(401, {"error": "Откройте робота заново из личного чата с ботом."})
                 return
             ROSTER.refresh()
+            if path in ("/api/perks", "/api/perk-acquire"):
+                # Do not hold SQLite's write lock during external network calls.
+                with db() as con:
+                    upsert_profile(con, user)
+                    own = require_character(con, user["id"])
+                    character = own["name"]
+                data = perks.snapshot(SHEETS, character)
+                with db() as con:
+                    perks.reconcile(con, data)
+                receipt = None
+                if path == "/api/perk-acquire":
+                    if normalize(str(body.get("character", ""))) != normalize(character):
+                        raise ValueError("Регистрационные данные изменились. Обновите модуль развития перед оформлением покупки.")
+                    key = str(body.get("requestId", ""))
+                    if not 8 <= len(key) <= 100 or not all(c.isascii() and (c.isalnum() or c in "_:-") for c in key):
+                        raise ValueError("Недопустимый номер обращения")
+                    data, receipt = perks.acquire(SHEETS, character, str(body.get("perkId", "")),
+                        str(body.get("mode", "")), f"app:{user['id']}:{key}", user, body.get("skills"))
+                    with db() as con:
+                        perks.reconcile(con, data)
+                with db() as con:
+                    result = {"shop": perks.public_snapshot(data), **state(con, user["id"])}
+                if receipt:
+                    result["perk_receipt"] = {k: receipt[k] for k in ("perk_id", "character", "mode", "cost", "balance_after", "skills")}
+                self.reply(200, result)
+                return
             with db() as con:
                 con.execute("BEGIN IMMEDIATE")
                 upsert_profile(con, user)
@@ -924,6 +969,12 @@ class Handler(BaseHTTPRequestHandler):
                 result["faq"] = FAQ
                 result["accesses"] = ACCESS_CATALOG
             self.reply(200, result)
+        except SheetsError as exc:
+            if str(exc) in BUSINESS_ERRORS:
+                self.reply(400, {"error": perks.MESSAGES.get(str(exc), "Оформление развития недоступно. Обновите модуль и повторите обращение.")})
+            else:
+                print("Perk shop temporarily unavailable; retry uses the same request ID", flush=True)
+                self.reply(503, {"error": "Связь с модулем развития прервалась. Обновите сведения или повторите то же обращение, чтобы проверить результат без повторного списания."})
         except ValueError as exc:
             self.reply(400, {"error": str(exc)})
         except (KeyError, TypeError):

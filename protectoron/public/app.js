@@ -1,5 +1,7 @@
 'use strict';
 const tg = window.Telegram?.WebApp;
+// Release Telegram's loading cover before sprite/API requests or UI setup.
+try{tg?.ready();tg?.setHeaderColor('#141914');tg?.setBackgroundColor('#141914');}catch{}
 const initData = tg?.initData || '';
 const real = Boolean(initData);
 const $ = id => document.getElementById(id);
@@ -56,13 +58,14 @@ async function api(path, data={}){
   try {response=await fetch(`/api/${path}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({initData,...data}),signal:AbortSignal.timeout(20000)});}
   catch {throw new Error('Связь с контроллером прервалась; пожалуйста, проверьте соединение и повторите обращение.');}
   const result=await response.json();
-  if(!response.ok)throw new Error(result.error||'Контроллер временно недоступен.');
+  if(!response.ok){const error=new Error(result.error||'Контроллер временно недоступен.');error.definitive=response.status>=400&&response.status<500;throw error;}
   return result;
 }
 function setTab(name){
   document.querySelectorAll('.view').forEach(view=>view.classList.toggle('active',view.id===name));
   document.querySelectorAll('[data-tab]').forEach(button=>{const active=button.dataset.tab===name;button.classList.toggle('active',active);if(active)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current');});
   play('click');haptic();clearError();
+  if(name==='perks')loadPerks();
 }
 function sync(data){
   if(data.profile)profile=data.profile;
@@ -86,17 +89,19 @@ function sync(data){
   renderRequests();
   if(data.accesses&&!accessCatalog){accessCatalog=data.accesses;renderAccesses();}
   renderHistory();renderFaq(data.faq||fallbackFaq);
+  if(data.shop)syncPerks(data.shop);
 }
 function renderHistory(){
   const list=$('history-list');list.replaceChildren();
   if(!events.length){const p=document.createElement('p');p.className='empty-state';p.textContent='После Вашего первого обращения здесь появятся записи о выдаче препарата и запросах на повышение доступа.';list.append(p);return;}
   for(const event of events){
     const el=document.createElement('article');el.className='history-entry';
-    const img=document.createElement('img');img.src=event.kind==='dispense'?'/assets/mysterium.webp':'/assets/terminal-cut.png';img.alt='';
+    const img=document.createElement('img');img.src=event.kind==='perk'?(perkCatalog?.perks.find(p=>p.id===event.payload.perk_id)?.image||'/assets/terminal-cut.png'):event.kind==='dispense'?'/assets/mysterium.webp':'/assets/terminal-cut.png';img.alt='';
     const body=document.createElement('div'),title=document.createElement('strong'),desc=document.createElement('p'),date=document.createElement('time');
     title.textContent=event.kind==='dispense'?'Выдача мистериума':'Запрос на повышение доступа';
     desc.textContent=event.kind==='dispense'?`${roman[event.payload.degree]} степень · ${event.payload.units} ${event.payload.units===1?'единица':'единицы'} препарата`:`${event.payload.target} · ожидает тестирования`;
     if(event.kind==='dispense'&&event.payload.for_companion)desc.textContent+=` · получатель: ${event.payload.recipient}`;
+    if(event.kind==='perk'){title.textContent=event.payload.mode==='paid'?'Покупка перка':event.payload.mode==='free'?'Перк за уровень':'Классовый перк';desc.textContent=`${event.payload.character} · ${event.payload.perk_name} · ${event.payload.mode==='paid'?`списано ${event.payload.cost} ${pointsWord(event.payload.cost)}`:'без списания очков'}`;}
     const time=new Date(event.created_at*1000);date.dateTime=time.toISOString();date.textContent=time.toLocaleString('ru-RU',{day:'2-digit',month:'long',hour:'2-digit',minute:'2-digit'});
     body.append(title,desc,date);el.append(img,body);list.append(el);
   }
@@ -257,9 +262,11 @@ async function start(){
   try{tg?.ready();tg?.expand();tg?.setHeaderColor('#141914');tg?.setBackgroundColor('#141914');if(tg?.isVersionAtLeast?.('7.10'))tg.setBottomBarColor('#141914');}catch{}
   try{await loadSprites();}catch(e){showError(e.message);}
   try{accessCatalog=await(await fetch('/accesses.json')).json();renderAccesses();}catch{showError('Не удалось загрузить список служб; пожалуйста, откройте робота заново.');}
+  try{perkCatalog=await(await fetch('/perks.json')).json();renderPerks();}catch{showError('Не удалось загрузить каталог перков; пожалуйста, откройте робота заново.');}
   if(real){
     try{
       const data=await api('state');sync(data);$('connection-label').textContent=`На связи · ${profile.character||profile.name}`;
+      loadPerks();
       const receiptId=new URLSearchParams(location.search).get('receipt');
       const receipt=events.find(e=>e.id===receiptId&&e.kind==='dispense');
       if(receipt){degree=receipt.payload.degree;await animateOpen();showReceipt({...receipt.payload,id:receipt.id});}
@@ -269,5 +276,109 @@ async function start(){
     $('profile-form').querySelector('button').disabled=true;
     $('registration-form').querySelector('button').disabled=true;
   }
+  if(new URLSearchParams(location.search).get('view')==='perks')setTab('perks');
 }
+
+let perkCatalog=null,shop=null,perkFilter='small',perkLoading=false,perkSelection=null,pendingPerk=null;
+const classSkillNames=['Анализ','История','Расследование','Инженерия','Медицина','Убеждение'];
+function pointsWord(value){const n=Math.abs(value)%100,last=n%10;return n>10&&n<20?'очков':last===1?'очко':last>=2&&last<=4?'очка':'очков';}
+function pendingStorageKey(id){return `protectoron-perk-${tg?.initDataUnsafe?.user?.id||'user'}-${id}`;}
+function savePendingPerk(value){const previousId=pendingPerk?.characterId||shop?.character_id;pendingPerk=value;try{if(value)localStorage.setItem(pendingStorageKey(value.characterId),JSON.stringify(value));else if(previousId)localStorage.removeItem(pendingStorageKey(previousId));}catch{}$('perk-pending').hidden=!pendingPerk;}
+function readPendingPerk(){try{const value=JSON.parse(localStorage.getItem(pendingStorageKey(shop.character_id))||'null');return value?.characterId===shop.character_id?value:null;}catch{return null;}}
+function syncPerks(data){
+  if(data.character!==ownCharacter?.name)return;
+  const previous=shop?.character_id;shop=data;
+  if(previous!==shop.character_id)pendingPerk=readPendingPerk();
+  else if(!pendingPerk)pendingPerk=readPendingPerk();
+  if(pendingPerk&&shop.owned.some(item=>item.perk_id===pendingPerk.perkId))savePendingPerk(null);
+  $('perk-character').textContent=shop.character;
+  $('perk-level').textContent=shop.level===null?'Не указан':String(shop.level);
+  $('perk-points').textContent=shop.points===null?'Не указаны':String(shop.points);
+  $('perk-free-count').textContent=shop.free_choices===null?'Бесплатные выборы: уровень ещё не указан в реестре.':`Бесплатных выборов за уровень: ${shop.free_choices}`;
+  $('perk-status').textContent=!shop.can_acquire?'Уточните класс персонажа в реестре.':!shop.points_editable?'Для покупки необходим доступный остаток очков, а не формула общего начисления.':shop.points===null?'Доступный остаток очков ещё не указан в реестре. Бесплатный выбор определяется отдельно по уровню.':'Данные реестра проверены; после получения перка остаток обновится автоматически.';
+  if($('own-development'))$('own-development').textContent=`Уровень персонажа: ${shop.level===null?'не указан':shop.level} · доступно очков навыков: ${shop.points===null?'не указано':shop.points}`;
+  $('perk-pending').hidden=!pendingPerk;
+  renderPerks();renderClassPerk();
+}
+async function loadPerks(){
+  if(perkLoading)return;
+  if(!real||!ownCharacter){shop=null;$('perk-status').textContent=real?'Сначала укажите имя Вашего персонажа в разделе выдачи.':'Получение доступно после открытия робота из личного чата Telegram.';renderPerks();return;}
+  perkLoading=true;$('perk-refresh').disabled=true;
+  try{sync(await api('perks'));}
+  catch(error){shop=null;renderPerks();$('perk-status').textContent=error.message;}
+  finally{perkLoading=false;$('perk-refresh').disabled=false;}
+}
+function canGetPerk(perk,mode){
+  if(!real||busy||!shop?.can_acquire||pendingPerk||shop.owned.some(item=>item.perk_id===perk.id))return false;
+  return mode==='free'?perk.group==='small'&&shop.free_choices>0:shop.points_editable&&Number.isInteger(shop.points)&&shop.points>=perk.cost;
+}
+function renderPerks(){
+  if(!perkCatalog)return;
+  const list=$('perk-catalog'),owned=new Set((shop?.owned||[]).map(p=>p.perk_id));
+  // Keep disclosure nodes and focus when a balance refresh arrives.
+  for(const perk of perkCatalog.perks.filter(p=>p.group!=='class')){
+    let card=list.querySelector(`[data-perk-id="${perk.id}"]`);
+    if(!card){
+      card=document.createElement('details');card.className='perk-card';card.dataset.perkId=perk.id;
+      const summary=document.createElement('summary'),img=document.createElement('img'),body=document.createElement('span'),name=document.createElement('strong'),meta=document.createElement('span'),ownership=document.createElement('span');
+      img.src=perk.image;img.alt='';img.loading='lazy';name.className='perk-name';name.textContent=perk.name;meta.className='perk-meta';meta.textContent=`${perk.type==='active'?'Активный · 1 раз за главу':'Постоянный'} · ${perk.cost} ${pointsWord(perk.cost)}`;ownership.className='perk-ownership';body.append(name,meta,ownership);summary.append(img,body);
+      const desc=document.createElement('p');desc.className='perk-description';desc.textContent=perk.description;
+      const actions=document.createElement('div');actions.className='perk-actions';const buy=document.createElement('button');buy.type='button';buy.className='secondary-button perk-buy';buy.textContent=`Купить за ${perk.cost} ${pointsWord(perk.cost)}`;buy.addEventListener('click',()=>choosePerk(perk,'paid'));actions.append(buy);
+      if(perk.group==='small'){const free=document.createElement('button');free.type='button';free.className='secondary-button perk-free';free.textContent='Выбрать за уровень';free.addEventListener('click',()=>choosePerk(perk,'free'));actions.append(free);}
+      card.append(summary,desc,actions);list.append(card);
+    }
+    const receipt=shop?.owned.find(item=>item.perk_id===perk.id);
+    card.hidden=perkFilter==='owned'?!owned.has(perk.id):perk.group!==perkFilter;
+    card.querySelector('.perk-ownership').textContent=receipt?(receipt.mode==='free'?'Получен за уровень, без списания очков':'Приобретён') : '';
+    card.querySelector('.perk-buy').disabled=!canGetPerk(perk,'paid');
+    const free=card.querySelector('.perk-free');if(free)free.disabled=!canGetPerk(perk,'free');
+    card.querySelector('.perk-actions').hidden=owned.has(perk.id);
+  }
+  $('perk-empty').hidden=perkFilter!=='owned'||owned.size>0;
+}
+function renderClassPerk(){
+  const target=$('perk-class'),perk=perkCatalog?.perks.find(p=>p.id===shop?.class_id);
+  if(!perk){target.replaceChildren();delete target.dataset.signature;return;}
+  const signature=JSON.stringify([shop.character_id,perk.id,shop.class_skills]);
+  if(target.dataset.signature===signature){const button=target.querySelector('button');if(button)button.disabled=busy||Boolean(pendingPerk)||target.querySelectorAll('input:checked').length!==2;return;}
+  target.dataset.signature=signature;target.replaceChildren();
+  const card=document.createElement('article');card.className='perk-class-card';const heading=document.createElement('div');heading.className='perk-class-heading';const img=document.createElement('img');img.src=perk.image;img.alt='';const body=document.createElement('div'),label=document.createElement('span'),name=document.createElement('h2');label.className='eyebrow';label.textContent='КЛАССОВЫЙ · БЕСПЛАТНО';name.textContent=perk.name;body.append(label,name);heading.append(img,body);const desc=document.createElement('p');desc.className='perk-description';desc.textContent=perk.description;card.append(heading,desc);
+  if(perk.id==='twice_learned_chemist'){
+    if(shop.class_skills.length){const text=document.createElement('p');text.textContent=`Закреплённые навыки: ${shop.class_skills.join(', ')}. Бонусы следует отметить в личной таблице персонажа.`;card.append(text);}
+    else{const text=document.createElement('p');text.textContent='Выберите два разных навыка, чтобы закрепить действие Вашего классового перка. Очки навыков не расходуются.';const choices=document.createElement('div');choices.className='perk-skill-options';const button=document.createElement('button');button.type='button';button.className='secondary-button';button.textContent='Закрепить два навыка';button.disabled=true;
+      for(const skill of classSkillNames){const label=document.createElement('label');label.className='perk-check';const input=document.createElement('input');input.type='checkbox';input.value=skill;const text=document.createElement('span');text.textContent=skill;label.append(input,text);input.addEventListener('change',()=>{const selected=Array.from(choices.querySelectorAll('input:checked'));for(const other of choices.querySelectorAll('input'))other.disabled=selected.length>=2&&!other.checked;button.disabled=busy||Boolean(pendingPerk)||selected.length!==2;});choices.append(label);}
+      button.addEventListener('click',()=>choosePerk(perk,'class',Array.from(choices.querySelectorAll('input:checked'),input=>input.value)));card.append(text,choices,button);}
+  }
+  target.append(card);
+}
+function choosePerk(perk,mode,skills=[]){
+  if(busy||pendingPerk||!shop?.can_acquire)return;
+  if(mode!=='class'&&!canGetPerk(perk,mode))return;
+  perkSelection={perkId:perk.id,mode,skills,character:shop.character,characterId:shop.character_id};
+  $('perk-dialog-image').src=perk.image;$('perk-dialog-title').textContent=perk.name;$('perk-dialog-character').textContent=`Персонаж: ${shop.character}`;
+  $('perk-dialog-summary').textContent=mode==='paid'?`При подтверждении будет списано ${perk.cost} ${pointsWord(perk.cost)}. После покупки останется ${shop.points-perk.cost} ${pointsWord(shop.points-perk.cost)}.`:mode==='free'?'Вы используете один бесплатный выбор за уровень; очки навыков не будут списаны.':`Действие классового перка закрепляется для навыков: ${skills.join(', ')}. Очки навыков не расходуются.`;
+  $('perk-scene-label').hidden=mode==='class';$('perk-scene-confirm').checked=false;$('perk-confirm').disabled=mode!=='class';$('perk-confirm').textContent=mode==='paid'?`Купить за ${perk.cost} ${pointsWord(perk.cost)}`:mode==='free'?'Получить бесплатно':'Закрепить выбор';$('perk-dialog').showModal();
+}
+async function submitPerk(selection,retry=false){
+  if(busy||!selection)return;
+  if(!retry&&selection.mode!=='class'&&!$('perk-scene-confirm').checked)return;
+  busy=true;clearError();$('perk-confirm').disabled=true;$('perk-cancel').disabled=true;$('perk-retry').disabled=true;
+  if(!pendingPerk)savePendingPerk({...selection,key:freshKey()});
+  const pending={...pendingPerk};renderPerks();renderClassPerk();
+  try{
+    const data=await api('perk-acquire',{perkId:pending.perkId,mode:pending.mode,character:pending.character,requestId:pending.key,skills:pending.skills});
+    savePendingPerk(null);sync(data);const receipt=data.perk_receipt,perk=perkCatalog.perks.find(p=>p.id===receipt.perk_id);
+    $('perk-result').textContent=receipt.mode==='paid'?`«Перк «${perk.name}» приобретён для ${receipt.character}; списано ${receipt.cost} ${pointsWord(receipt.cost)}, доступный остаток — ${receipt.balance_after} ${pointsWord(receipt.balance_after)}».`:`«Перк «${perk.name}» закреплён для ${receipt.character} без списания очков навыков».`;$('perk-result').hidden=false;play('confirm');haptic('medium');
+  }catch(error){if(error.definitive)savePendingPerk(null);showError(error.message);}
+  
+  finally{busy=false;$('perk-cancel').disabled=false;$('perk-retry').disabled=false;if($('perk-dialog').open)$('perk-dialog').close();perkSelection=null;renderPerks();renderClassPerk();if(!pendingPerk)loadPerks();}
+}
+$('perk-refresh').addEventListener('click',()=>{if(!busy)loadPerks();});
+$('perk-retry').addEventListener('click',()=>submitPerk(pendingPerk,true));
+$('perk-scene-confirm').addEventListener('change',()=>{$('perk-confirm').disabled=!$('perk-scene-confirm').checked;});
+$('perk-confirm').addEventListener('click',()=>submitPerk(perkSelection));
+$('perk-cancel').addEventListener('click',()=>{if(!busy){$('perk-dialog').close();perkSelection=null;}});
+$('perk-dialog').addEventListener('cancel',event=>{if(busy)event.preventDefault();});
+document.querySelectorAll('[data-perk-filter]').forEach(button=>button.addEventListener('click',()=>{perkFilter=button.dataset.perkFilter;document.querySelectorAll('[data-perk-filter]').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));renderPerks();play('click');}));
+setInterval(()=>{if(pendingPerk&&!busy&&!document.hidden)loadPerks();},15000);
 start();

@@ -1,4 +1,4 @@
-"""Bounded, signed Apps Script connection. This version cannot spend points."""
+"""Bounded, signed Apps Script connection; shop receipts are authoritative."""
 import hashlib
 import hmac
 import json
@@ -12,6 +12,11 @@ import urllib.request
 
 class SheetsError(RuntimeError):
     pass
+
+
+BUSINESS_ERRORS = {"invalid_balance", "balance_formula", "unknown_perk", "already_owned",
+    "id_conflict", "invalid_mode", "not_enough_points", "level_unknown", "no_free_choice",
+    "small_only", "invalid_class", "invalid_skills", "invalid_character", "character_not_found"}
 
 
 class GoogleRedirect(urllib.request.HTTPRedirectHandler):
@@ -32,6 +37,7 @@ class SheetsBridge:
         self.checked_at = None
         self.connected = False
         self.write_verified = False
+        self.shop_ready = False
         self.opener = urllib.request.build_opener(GoogleRedirect())
 
     @property
@@ -50,7 +56,7 @@ class SheetsBridge:
     def call(self, payload):
         if not self.configured:
             raise SheetsError("not_configured")
-        if payload.get("action") not in ("verify_connection", "balance"):
+        if payload.get("action") not in ("verify_connection", "balance", "shop_state", "acquire_perk"):
             raise SheetsError("unsupported_action")
         request = urllib.request.Request(self.url,
             data=json.dumps(self.envelope(payload), ensure_ascii=False).encode(),
@@ -67,22 +73,25 @@ class SheetsBridge:
             # No URLs, request bodies, credentials, or remote messages in logs.
             raise SheetsError("connection_failed") from None
         if not isinstance(result, dict) or result.get("ok") is not True:
-            raise SheetsError("request_rejected")
+            code = result.get("error") if isinstance(result, dict) else None
+            raise SheetsError(code if code in BUSINESS_ERRORS else "request_rejected")
         return result
 
     def verify(self):
         try:
             result = self.call({"action": "verify_connection"})
-            if (result.get("version") != 1 or result.get("registry_ready") is not True or
+            if (result.get("version") not in (1, 2) or result.get("registry_ready") is not True or
                     result.get("write_verified") is not True):
                 raise SheetsError("verification_failed")
         except SheetsError:
             with self.lock:
                 self.connected = self.write_verified = False
+                self.shop_ready = False
                 self.checked_at = int(time.time())
             raise
         with self.lock:
             self.connected = self.write_verified = True
+            self.shop_ready = result.get("shop_ready") is True
             self.checked_at = int(time.time())
         return result
 
@@ -101,7 +110,7 @@ class SheetsBridge:
         with self.lock:
             fresh = self.checked_at is not None and time.time() - self.checked_at <= 3660
             return {"configured": self.configured, "connected": bool(self.connected and fresh),
-                    "write_verified": bool(self.write_verified and fresh), "checked_at": self.checked_at}
+                    "write_verified": bool(self.write_verified and fresh), "shop_ready": bool(self.shop_ready and fresh), "checked_at": self.checked_at}
 
     def worker(self, stop):
         if not self.configured:
