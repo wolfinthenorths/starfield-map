@@ -263,6 +263,21 @@ class ControllerTests(unittest.TestCase):
             server.decide_request(con, {"id": 902, "username": "gj0xl"}, rejected["id"], "reject")
             with self.assertRaises(ValueError): server.collect_companion(con, 202, rejected["id"], False)
 
+    def test_new_report_for_same_recipient_needs_new_approval(self):
+        gm = {"id": 901, "username": "VaultTecGm"}
+        with server.db() as con:
+            first = server.companion_request(con, 202, "Цифер", "Товарищу требуется доставить препарат", "first-visit", "app")
+            server.decide_request(con, gm, first["id"], "approve")
+            collected = server.collect_companion(con, 202, first["id"], False)
+            second = server.companion_request(con, 202, "Цифер", "Требуется повторная доставка препарата", "second-visit", "app")
+            self.assertNotEqual(first["id"], second["id"])
+            self.assertEqual(second["status"], "pending")
+            with self.assertRaises(ValueError): server.collect_companion(con, 202, second["id"], False)
+            server.decide_request(con, gm, second["id"], "approve")
+            next_collection = server.collect_companion(con, 202, second["id"], False)
+            self.assertNotEqual(collected["id"], next_collection["id"])
+            self.assertEqual(con.execute("SELECT COUNT(*) FROM events WHERE kind='dispense'").fetchone()[0], 2)
+
     def test_name_registration_is_immediate_without_gm_requests(self):
         with server.db() as con:
             con.execute("DELETE FROM settings")
