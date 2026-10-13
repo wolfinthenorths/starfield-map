@@ -20,6 +20,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from roster import Roster, normalize
 from backups import Backups
+from sheets import SheetsBridge
 
 ROOT = Path(__file__).resolve().parent
 PUBLIC = ROOT / "public"
@@ -36,6 +37,7 @@ GM_BIND_CODE = os.environ.get("GM_BIND_CODE", "")
 WEBHOOK_SECRET = hmac.new(TOKEN.encode(), b"protectoron-webhook", hashlib.sha256).hexdigest()
 STOP = threading.Event()
 BACKUPS = Backups(DATA_DIR)
+SHEETS = SheetsBridge(os.environ.get("SHEETS_BRIDGE_URL", ""), os.environ.get("SHEETS_BRIDGE_SECRET", ""))
 ROMAN = {1: "I", 2: "II", 3: "III"}
 FAQ = [
     {"id": "purpose", "question": "Для чего нужен мистериум?", "answer": "Мистериум поддерживает контроль при гулификации, а необходимое количество препарата определяется её степенью: I — 1 единица, II — 2 единицы, III — 3 единицы."},
@@ -835,7 +837,7 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/health":
             with db() as con:
                 connected = bool(setting(con, "gm_chat_id"))
-            self.reply(200, {"ok": True, "bot_configured": bool(TOKEN and APP_URL), "gm_connected": connected, "registry_ready": bool(ROSTER.entries), "backup": {key: BACKUPS.status().get(key) for key in ("local_at", "remote_at", "remote_verified", "remote_error")}})
+            self.reply(200, {"ok": True, "bot_configured": bool(TOKEN and APP_URL), "gm_connected": connected, "registry_ready": bool(ROSTER.entries), "sheets": SHEETS.status(), "backup": {key: BACKUPS.status().get(key) for key in ("local_at", "remote_at", "remote_verified", "remote_error")}})
             return
         file = (PUBLIC / (path.lstrip("/") or "index.html")).resolve()
         if not file.is_relative_to(PUBLIC) or not file.is_file():
@@ -951,6 +953,7 @@ def main():
             raise SystemExit("Existing database is missing; restore a verified backup instead of creating an empty database")
     init_db()
     threading.Thread(target=BACKUPS.worker, args=(STOP, backup_warning), daemon=True).start()
+    threading.Thread(target=SHEETS.worker, args=(STOP,), daemon=True).start()
     if TOKEN and APP_URL:
         threading.Thread(target=setup_bot, daemon=True).start()
         threading.Thread(target=outbox_worker, daemon=True).start()
