@@ -25,7 +25,7 @@
     </nav>
 
     <section id="dispense" class="view active" aria-labelledby="dispense-title">
-      <div class="section-heading"><div><p class="eyebrow">МЕДИЦИНСКОЕ ОБСЛУЖИВАНИЕ</p><h1 id="dispense-title">Мистериум</h1></div><span class="small-tag">КАССЕТА / 001</span></div>
+      <div class="section-heading"><div><p class="eyebrow">МЕДИЦИНСКОЕ ОБСЛУЖИВАНИЕ</p><h1 id="dispense-title">Мистериум</h1></div><span class="small-tag">УРОВЕНЬ 1</span></div>
       <div class="scene-shell">
         <div class="scene-label"><span>ОТСЕК ВЫДАЧИ</span><span id="scene-state">ЗАМОК ЗАКРЫТ</span></div>
         <canvas id="scene" width="640" height="320" role="img" aria-label="Робот-контроллер рядом с закрытым контейнером мистериума"></canvas>
@@ -33,30 +33,30 @@
       </div>
       <div class="speech"><img src="/assets/robotSprite-cut.png" alt="" class="robot-avatar"><div><span class="eyebrow">КОНТРОЛЛЕР</span><p id="robot-speech" aria-live="polite">«Назовите персонажа. Я проверю класс и дозировку по реестру».</p></div></div>
       <div id="registration-panel" class="profile-card">
-        <span class="eyebrow">ДАННЫЕ ПЕРСОНАЖА</span><h2>Имя вашего персонажа</h2>
+        <span class="eyebrow">ДАННЫЕ ПЕРСОНАЖА</span><h2>Имя Вашего персонажа</h2>
         <form id="registration-form"><label for="registration-name">Как персонаж записан в реестре?</label><div class="input-row"><input id="registration-name" maxlength="80" placeholder="Имя персонажа" required><button class="secondary-button" type="submit">Проверить</button></div></form>
-        <p id="registration-status" class="fine-print" aria-live="polite">Класс и дозировка определяются по реестру. Подтверждение ГМ не требуется.</p>
+        <p id="registration-status" class="fine-print" aria-live="polite">Класс и количество препарата определяются по реестру.</p>
       </div>
       <div id="degree-panel" class="degree-panel" hidden>
         <div class="own-card"><span class="eyebrow">ДАННЫЕ РЕЕСТРА</span><strong id="own-name"></strong><p id="own-details"></p></div>
         <button id="dispense-button" class="primary-button" disabled type="button"><span>Получить мистериум</span><span aria-hidden="true">→</span></button>
-        <p id="own-dose-note" class="fine-print">Доза определяется классом и степенью из реестра.</p>
+        <p id="own-dose-note" class="fine-print">Количество препарата определяется классом и степенью из реестра.</p>
         <button id="companion-open" class="secondary-button companion-open" type="button">Взять для товарища</button>
       </div>
-      <div id="companion-panel" class="profile-card" hidden><span class="eyebrow">ВЫДАЧА ПО РАПОРТУ</span><h2>Для кого нужен препарат?</h2><div id="companion-recipients" class="access-services"></div><form id="companion-form"><label for="companion-report">Коротко опишите ситуацию</label><textarea id="companion-report" minlength="5" maxlength="1200" rows="4" placeholder="Почему товарищ не может получить свою дозу самостоятельно?" required></textarea><button id="companion-send" class="primary-button" type="submit" disabled><span>Отправить рапорт ГМ</span><span aria-hidden="true">→</span></button></form><p id="companion-status" class="fine-print" aria-live="polite"></p><button id="companion-back" class="text-button" type="button">Вернуться к личной выдаче</button></div>
+      <div id="companion-panel" class="profile-card" hidden><span class="eyebrow">ВЫДАЧА ПО РАПОРТУ</span><h2>Для кого нужен препарат?</h2><div id="companion-recipients" class="access-services"></div><form id="companion-form"><label for="companion-report">По какой причине товарищ не может получить препарат самостоятельно?</label><textarea id="companion-report" minlength="5" maxlength="1200" rows="4" placeholder="Коротко опишите ситуацию" required></textarea><button id="companion-send" class="primary-button" type="submit" disabled><span>Отправить рапорт</span><span aria-hidden="true">→</span></button></form><p id="companion-status" class="fine-print" aria-live="polite"></p><button id="companion-back" class="text-button" type="button">Вернуться к личной выдаче</button></div>
       <div id="requests-list" class="requests-list"></div>
       <div id="receipt-panel" class="receipt-panel" hidden>
         <img src="/assets/mysterium.webp" alt="Флакон мистериума">
-        <div><span class="eyebrow">ВЫДАЧА ЗАФИКСИРОВАНА</span><h2 id="receipt-dose">Полная доза</h2><p>Выдача сохранена в журнале.</p></div>
+        <div><span class="eyebrow">ВЫДАЧА ЗАФИКСИРОВАНА</span><h2 id="receipt-dose">Препарат подготовлен</h2><p>Выдача сохранена в журнале.</p></div>
         <button id="again-button" class="secondary-button" type="button">Новое обращение</button>
       </div>
-      <p class="notice">Получение препарата и его приём — отдельные действия. Действия вашего персонажа вы отыгрываете самостоятельно.</p>
+      <p class="notice">Получение препарата и его приём — отдельные действия. Действия Вашего персонажа Вы отыгрываете самостоятельно.</p>
     </section>
 
     <section id="access" class="view" aria-labelledby="access-title">
       <div class="section-heading"><div><p class="eyebrow">СИСТЕМЫ УБЕЖИЩА</p><h1 id="access-title">Повышение доступа</h1></div></div>
       <div class="access-card"><img src="/assets/terminal-cut.png" alt="Терминал допуска"><div><span class="eyebrow">ПРОФЕССИОНАЛЬНАЯ АТТЕСТАЦИЯ</span><strong id="access-code">—</strong><p>Допуск определяется отдельно для каждой службы.</p></div></div>
-      <div class="speech"><img src="/assets/robotSprite-cut.png" alt="" class="robot-avatar"><div><span class="eyebrow">КОНТРОЛЛЕР</span><p>«Уточните, какой именно доступ вам требуется повысить».</p></div></div>
+      <div class="speech"><img src="/assets/robotSprite-cut.png" alt="" class="robot-avatar"><div><span class="eyebrow">КОНТРОЛЛЕР</span><p>«Уточните, какой именно доступ Вам требуется повысить».</p></div></div>
       <div id="access-services" class="access-services" role="group" aria-label="Выберите службу"></div>
       <div id="access-level-panel" hidden><div class="field-heading"><label>Нужный уровень полномочий</label><button id="change-service" class="text-button" type="button">Другая служба</button></div><p id="service-description" class="section-intro"></p><div id="access-levels" role="group" aria-label="Выберите уровень допуска"></div></div>
       <div id="access-result" class="inline-result" aria-live="polite" hidden></div>
@@ -67,17 +67,26 @@
       <div class="section-heading"><div><p class="eyebrow">СПРАВОЧНЫЙ МОДУЛЬ</p><h1 id="faq-title">Чем могу помочь?</h1></div></div>
       <p class="section-intro">Ответы контроллера на частые вопросы.</p>
       <div id="faq-list" class="faq-list"></div>
-      <div class="links-panel"><span class="eyebrow">МАТЕРИАЛЫ ПРОЕКТА</span><a href="https://dotdossier.com/" target="_blank" rel="noopener noreferrer">DOTD Dossier <span aria-hidden="true">↗</span></a><a href="https://starfield-archive.netlify.app/" target="_blank" rel="noopener noreferrer">Архив Starfield <span aria-hidden="true">↗</span></a></div>
+      <div class="links-panel"><span class="eyebrow">МАТЕРИАЛЫ ПРОЕКТА</span><a href="https://t.me/dawnofthed3ad" target="_blank" rel="noopener noreferrer">Материалы проекта <span aria-hidden="true">↗</span></a><a href="https://starfield-archive.netlify.app/" target="_blank" rel="noopener noreferrer">Архив Starfield <span aria-hidden="true">↗</span></a></div>
     </section>
 
     <section id="history" class="view" aria-labelledby="history-title">
       <div class="section-heading"><div><p class="eyebrow">ЛИЧНЫЕ ЗАПИСИ</p><h1 id="history-title">Журнал обращений</h1></div></div>
-      <form id="profile-form" class="profile-card"><label for="character">Регистрация другого персонажа</label><div class="input-row"><input id="character" maxlength="80" placeholder="Имя из реестра" autocomplete="off"><button class="secondary-button" type="submit">Проверить</button></div><p id="profile-status" class="fine-print" aria-live="polite">Привязка проверяется по таблице или подтверждается ГМ.</p></form>
+      <form id="profile-form" class="profile-card"><label for="character">Регистрация другого персонажа</label><div class="input-row"><input id="character" maxlength="80" placeholder="Имя из реестра" autocomplete="off"><button class="secondary-button" type="submit">Проверить</button></div><p id="profile-status" class="fine-print" aria-live="polite">Укажите имя Вашего персонажа из реестра.</p></form>
       <div id="history-list" class="history-list"><p class="empty-state">Обращений пока нет.</p></div>
     </section>
     <div id="error" class="error" role="alert" hidden></div>
     <div id="demo-notice" class="demo-notice" hidden>Вы просматриваете робота вне Telegram. Выдача доступна в личном чате с <a href="https://t.me/ptotectoronbot">@ptotectoronbot</a>.</div>
     <footer><span>VAULT–TEC / STARFIELD</span><span>КОНТРОЛЛЕР НА СВЯЗИ</span></footer>
   </main>
+  <dialog id="waiting-dialog" class="waiting-dialog" aria-labelledby="waiting-title" aria-describedby="waiting-message waiting-note">
+    <img src="/assets/robotSprite-cut.png" alt="" class="waiting-robot">
+    <span class="eyebrow">КОНТРОЛЛЕР ОБРАБАТЫВАЕТ ОБРАЩЕНИЕ</span>
+    <h2 id="waiting-title">Ожидайте</h2>
+    <p id="waiting-message" role="status">Ожидание согласования на выдачу «Мистериума»</p>
+    <p id="waiting-recipient" class="fine-print"></p>
+    <p id="waiting-note" class="fine-print">Результат появится здесь после завершения проверки. Вы можете свернуть окно — рапорт останется на рассмотрении.</p>
+    <button id="waiting-minimize" class="secondary-button" type="button">Свернуть</button>
+  </dialog>
 </body>
 </html>

@@ -38,12 +38,12 @@ STOP = threading.Event()
 BACKUPS = Backups(DATA_DIR)
 ROMAN = {1: "I", 2: "II", 3: "III"}
 FAQ = [
-    {"id": "purpose", "question": "Для чего нужен мистериум?", "answer": "Мистериум необходим для поддержания контроля при гулификации. Индивидуальная полная доза зависит от степени: I — 1 единица, II — 2 единицы, III — 3 единицы."},
-    {"id": "interval", "question": "Как часто принимать дозу?", "answer": "Полная доза нужна каждые 10 собственных игровых ходов. Получение препарата не считается его приёмом. Отыгрыш приёма остаётся за игроком."},
+    {"id": "purpose", "question": "Для чего нужен мистериум?", "answer": "Мистериум необходим для поддержания контроля при гулификации. Количество препарата определяется степенью: I — 1 единица, II — 2 единицы, III — 3 единицы."},
+    {"id": "interval", "question": "Как часто нужно принимать препарат?", "answer": "Препарат необходимо принимать в полном назначенном количестве каждые 10 Ваших игровых ходов. Получение препарата не считается его приёмом. Приём Вы отыгрываете отдельно."},
     {"id": "turn", "question": "Что считается ходом?", "answer": "Засчитывается собственный игровой пост с действием, в том числе передвижением или отыгрышем реквеста. Обычные диалоги, спасброски, технические сообщения и дополнительные ответы не засчитываются."},
-    {"id": "missed", "question": "Что будет при пропуске приёма?", "answer": "После первых 10 ходов без новой дозы: на следующих ходах 1–3 действует помеха, на 4-м мастер может изменить реквест, на 5-м управление полностью передаётся мастеру. Полная доза возвращает контроль и сбрасывает счётчик."},
+    {"id": "missed", "question": "Что будет при пропуске приёма?", "answer": "После первых 10 ходов без нового приёма препарата: на следующих ходах 1–3 действует помеха, на 4-м условия проверок могут быть изменены, на 5-м наступает полная потеря контроля над персонажем. Приём полного назначенного количества препарата восстанавливает контроль и сбрасывает счётчик."},
     {"id": "access", "question": "Как повысить доступ?", "answer": "Выберите службу и нужный уровень её полномочий. Повышение квалификации проводится через тест; ссылка будет добавлена позже. Уровни разных служб учитываются отдельно: 1 — вспомогательный, 2 — рабочий, 3 — расширенный, 4 — критический. Уровень персонажа и номер этажа не обозначают служебный допуск. Ω не является пятым уровнем и не выдаётся штатным сотрудникам."},
-    {"id": "materials", "question": "Где найти материалы проекта?", "answer": "Материалы проекта доступны на DOTD Dossier и в архиве Starfield. Действующие условия конкретной сцены уточняет мастер."},
+    {"id": "materials", "question": "Где найти материалы проекта?", "answer": "Материалы проекта доступны в Telegram: https://t.me/dawnofthed3ad. Архив Starfield также доступен в справочном модуле."},
 ]
 
 
@@ -276,15 +276,15 @@ def issue(con, user_id, degree, key, notify=True, recipient=None, for_companion=
     con.execute("UPDATE profiles SET degree=?,updated_at=? WHERE user_id=?", (degree, now, user_id))
     who = html.escape(profile["character"] or profile["name"])
     texts = [
-        f"Оптический датчик Протектрона задерживается на посетителе, после чего в корпусе раздаётся короткий щелчок. «{who}. Степень гулификации {ROMAN[degree]} принята. Подготавливаю полную дозу». Замок контейнера отходит в сторону, и крышка медленно поднимается, открывая кассету с препаратом.",
-        f"«{who}. Степень гулификации {ROMAN[degree]}. Запрос обработан». Протектрон поворачивается к контейнеру; сервопривод с негромким гудением освобождает крышку, а индикатор над кассетой сменяет янтарный свет на зелёный. «Препарат доступен к получению».",
-        f"Внутри корпуса Протектрона негромко потрескивает реле. «{who}. Степень гулификации {ROMAN[degree]} зафиксирована». Робот отводит запор контейнера, и поднявшаяся крышка открывает подготовленную кассету. «Пожалуйста, соблюдайте интервал приёма».",
+        f"Оптический датчик Протектрона задерживается на посетителе, после чего в корпусе раздаётся короткий щелчок. «{who}. Степень гулификации {ROMAN[degree]} принята. Подготавливаю препарат». Замок контейнера отходит в сторону, и крышка медленно поднимается, открывая препарат.",
+        f"«{who}. Степень гулификации {ROMAN[degree]}. Запрос обработан». Протектрон поворачивается к контейнеру; сервопривод с негромким гудением освобождает крышку, а индикатор над препаратом сменяет янтарный свет на зелёный. «Препарат доступен к получению».",
+        f"Внутри корпуса Протектрона негромко потрескивает реле. «{who}. Степень гулификации {ROMAN[degree]} зафиксирована». Робот отводит запор контейнера, и поднявшаяся крышка открывает подготовленный препарат. «Пожалуйста, соблюдайте интервал приёма».",
     ]
     text = texts[int(event_id[:4], 16) % len(texts)]
     if for_companion:
-        text = f"«Рапорт согласован. Подготавливаю полную дозу для {html.escape(recipient)}: степень {ROMAN[degree]}». Протектрон освобождает замок контейнера; крышка поднимается, открывая кассету с препаратом. «Препарат доступен к получению»."
+        text = f"«Рапорт согласован. Подготавливаю препарат для {html.escape(recipient)}: степень {ROMAN[degree]}». Протектрон освобождает замок контейнера; крышка поднимается, открывая препарат. «Препарат доступен к получению»."
     unit_word = "единица" if degree == 1 else "единицы"
-    text += f"\n\n<b>Мистериум: {degree} {unit_word} — одна полная доза.</b>\nПолучение препарата не фиксирует его приём."
+    text += f"\n\n<b>Мистериум: {degree} {unit_word} — назначенное количество препарата.</b>\nПолучение препарата не фиксирует его приём."
     if for_companion:
         text += f"\n<b>Получатель: {html.escape(recipient)}.</b> Выдача разрешена по согласованному рапорту."
     rows = [[cb("Инструкция по приёму", "faq:interval")], [cb("Вернуться к контроллеру", "home")]]
@@ -298,7 +298,7 @@ def issue(con, user_id, degree, key, notify=True, recipient=None, for_companion=
 def self_issue(con, user_id, key, notify=True):
     own = require_character(con, user_id)
     if not own["eligible"]:
-        raise ValueError("Личная выдача мистериума недоступна для вашего класса или степени в реестре. Для товарища можно подать рапорт.")
+        raise ValueError("Личная выдача мистериума для Вашего класса недоступна. Для получения препарата с целью передачи иному лицу — напишите рапорт.")
     return issue(con, user_id, own["degree"], key, notify, own["name"])
 
 
@@ -309,7 +309,7 @@ def report_message(con, request):
     text = f"<b>{title}</b>\n\nИгрок: <a href=\"tg://user?id={request['user_id']}\">{html.escape(actor)}</a>\nПерсонаж игрока: {html.escape(profile['character'] or 'не зарегистрирован')}\n"
     text += f"{'Имя для регистрации' if request['kind']=='registration' else 'Получатель'}: <b>{html.escape(request['recipient_name'])}</b>\n"
     if request["degree"]:
-        text += f"Степень: {ROMAN[request['degree']]} · полная доза: {request['degree']} ед.\n"
+        text += f"Степень: {ROMAN[request['degree']]} · количество препарата: {request['degree']} ед.\n"
     if request["report"]:
         text += f"\n<b>Рапорт:</b>\n{html.escape(request['report'])}"
     return text
@@ -318,14 +318,14 @@ def report_message(con, request):
 def send_gm_report(con, request):
     chat_id = setting(con, "gm_chat_id")
     if not chat_id:
-        raise ValueError("Чат ГМ ещё не привязан. Обратитесь к администрации.")
+        raise ValueError("Согласование выдачи временно недоступно. Пожалуйста, повторите обращение позже.")
     queue(con, chat_id, report_message(con, request), keyboard([[cb("Согласовать", "gm:approve:" + request["id"]), cb("Отклонить", "gm:reject:" + request["id"])]]), setting(con, "gm_thread_id"))
 
 
 def register_character(con, user_id, name, source="chat"):
     entry = ROSTER.get(name)
     if not entry:
-        raise ValueError("Такого персонажа нет в реестре. Проверьте имя или обратитесь к ГМ.")
+        raise ValueError("Такого имени нет в реестре. Проверьте написание и повторите обращение.")
     con.execute("UPDATE profiles SET character=?,pending='' WHERE user_id=?", (entry["name"], user_id))
     return "verified"
 
@@ -355,7 +355,7 @@ def collect_companion(con, user_id, request_id, notify=True):
     require_character(con, user_id)
     request = con.execute("SELECT * FROM requests WHERE id=? AND kind='companion' AND user_id=?", (request_id, user_id)).fetchone()
     if not request or request["status"] not in ("approved", "issued"):
-        raise ValueError("Эта выдача не согласована ГМ.")
+        raise ValueError("Выдача препарата пока не согласована. Пожалуйста, ожидайте решения.")
     key = "companion:" + request_id
     if request["status"] == "issued":
         old = con.execute("SELECT id,payload,created_at FROM events WHERE user_id=? AND kind='dispense' AND request_key=?", (user_id, key)).fetchone()
@@ -401,11 +401,11 @@ def decide_request(con, user, request_id, decision):
     con.execute("UPDATE requests SET status=?,decided_by=? WHERE id=? AND status='pending'", (status, user["id"], request_id))
     if request["source"] == "chat":
         if request["kind"] == "registration":
-            queue(con, request["user_id"], "«Регистрация персонажа подтверждена. Контроллер готов к обслуживанию»." if status == "approved" else "«Регистрация отклонена ГМ. Уточните данные персонажа».", home_keyboard())
+            queue(con, request["user_id"], "«Регистрация персонажа подтверждена. Контроллер готов к обслуживанию»." if status == "approved" else "«Регистрация отклонена. Уточните данные персонажа».", home_keyboard())
         else:
-            rows = [[cb("Получить согласованную дозу", "collect:" + request_id)]] if status == "approved" else []
+            rows = [[cb("Получить препарат", "collect:" + request_id)]] if status == "approved" else []
             rows.append([cb("Вернуться", "home")])
-            queue(con, request["user_id"], f"«Рапорт для {html.escape(request['recipient_name'])} {'согласован' if status=='approved' else 'отклонён'} ГМ»." + (" Подготовлена одна полная доза; получение нужно подтвердить кнопкой." if status == "approved" else ""), keyboard(rows))
+            queue(con, request["user_id"], f"«Рапорт для {html.escape(request['recipient_name'])} {'согласован' if status=='approved' else 'отклонён'}»." + (" Препарат подготовлен. Подтвердите получение кнопкой." if status == "approved" else ""), keyboard(rows))
     return status, request
 
 
@@ -433,7 +433,7 @@ def access_request(con, user_id, target, key, notify=True):
         queue(con, user_id,
           "Протектрон поворачивает оптический модуль к терминалу; на дисплее загорается строка нового обращения. "
           f"«Запрос зарегистрирован: <b>{html.escape(target)}</b>». "
-          f"{test_note}\n\nОбращение сохранено в вашем журнале. Выбор кнопки сам по себе допуск не повышает.",
+          f"{test_note}\n\nОбращение сохранено в Вашем журнале. Выбор кнопки сам по себе допуск не повышает.",
           keyboard(rows))
     return {"id": event_id, "target": target, "repeated": False, "test_url": url}
 
@@ -582,19 +582,19 @@ def handle_update(update):
                 queue(con, user["id"], "Реестр перечитан. Классы, степени и привязки актуальны.", home_keyboard())
             elif data == "character" or (not own and (command in ("/start", "/menu", "/mysterium", "/cancel") or data in ("home", "mysterium", "companion"))):
                 con.execute("UPDATE profiles SET pending='register' WHERE user_id=?", (user["id"],))
-                queue(con, user["id"], "Протектрон поднимает оптический модуль. «Для проверки права на обслуживание назовите вашего персонажа — так, как он записан в реестре».\n\nИмя, класс и дозировка проверяются по реестру; подтверждение ГМ не требуется.", {"force_reply": True, "input_field_placeholder": "Имя персонажа"})
+                queue(con, user["id"], "Протектрон поднимает оптический модуль. «Для проверки права на обслуживание назовите Вашего персонажа — так, как он записан в реестре».", {"force_reply": True, "input_field_placeholder": "Имя персонажа"})
             elif text and not text.startswith("/") and profile["pending"] in ("register", "character"):
                 result = register_character(con, user["id"], text)
-                queue(con, user["id"], "«Имя проверено. Контроллер готов к обслуживанию».", home_keyboard())
+                queue(con, user["id"], f"«Добрый день, {html.escape(require_character(con, user['id'])['name'])}! Данные реестра проверены, укажите цель обращения?»", home_keyboard())
             elif command in ("/start", "/menu", "/cancel") or data == "home":
                 con.execute("UPDATE profiles SET pending='' WHERE user_id=?", (user["id"],))
-                queue(con, user["id"], f"«{html.escape(own['name'])}. Данные реестра проверены. Укажите цель обращения».", home_keyboard())
+                queue(con, user["id"], f"«Добрый день, {html.escape(own['name'])}! Данные реестра проверены, укажите цель обращения?»", home_keyboard())
             elif command == "/mysterium" or data == "mysterium" or data.startswith("degree:"):
                 own = require_character(con, user["id"])
                 if not own["eligible"]:
-                    raise ValueError("Личная выдача мистериума недоступна для вашего класса или степени в реестре. Для товарища можно подать рапорт.")
+                    raise ValueError("Личная выдача мистериума для Вашего класса недоступна. Для получения препарата с целью передачи иному лицу — напишите рапорт.")
                 prompt = new_prompt(con, user["id"], "self-dose")
-                queue(con, user["id"], f"«{html.escape(own['name'])}. По реестру степень гулификации {ROMAN[own['degree']]}. Полная доза — {own['degree']} ед. Контейнер подготовлен».", keyboard([[cb("Получить свою дозу", "self:" + prompt)], [cb("Взять для товарища", "companion")], [cb("Вернуться", "home")]]))
+                queue(con, user["id"], f"«{html.escape(own['name'])}. По реестру степень гулификации {ROMAN[own['degree']]}. Назначенное количество препарата — {own['degree']} ед. Контейнер подготовлен».", keyboard([[cb("Получить препарат", "self:" + prompt)], [cb("Взять для товарища", "companion")], [cb("Вернуться", "home")]]))
             elif data.startswith("self:"):
                 key = data.split(":", 1)[1]
                 if not consume_prompt(con, key, user["id"], "self-dose"):
@@ -604,7 +604,7 @@ def handle_update(update):
                 own = require_character(con, user["id"])
                 candidates = [item for item in ROSTER.entries.values() if item["eligible"] and item["key"] != own["key"]]
                 if not candidates:
-                    raise ValueError("В реестре нет другого персонажа с доступной дозой мистериума.")
+                    raise ValueError("В реестре нет другого персонажа, которому доступен препарат.")
                 prompt = new_prompt(con, user["id"], "buddy-picker", {"names": [item["name"] for item in candidates]})
                 queue(con, user["id"], "«Укажите товарища, для которого требуется препарат. Дозировка будет взята из реестра».", keyboard([[cb(item["name"], f"buddy:{prompt}:{index}")] for index, item in enumerate(candidates)] + [[cb("Вернуться", "home")]]))
             elif data.startswith("buddy:"):
@@ -618,11 +618,11 @@ def handle_update(update):
                     raise ValueError("Выберите получателя из списка")
                 name = names[i]
                 con.execute("UPDATE profiles SET pending=? WHERE user_id=?", ("report:" + name, user["id"]))
-                queue(con, user["id"], f"«Для выдачи препарата товарищу {html.escape(name)} составьте короткий рапорт: почему требуется получить дозу за него».\n\nОтправьте описание ситуации следующим сообщением — от 5 до 1200 символов.", {"force_reply": True, "input_field_placeholder": "Короткий рапорт"})
+                queue(con, user["id"], f"«По какой причине товарищ {html.escape(name)} не может получить препарат самостоятельно?»\n\nОтправьте рапорт следующим сообщением — от 5 до 1200 символов.", {"force_reply": True, "input_field_placeholder": "Короткий рапорт"})
             elif text and not text.startswith("/") and profile["pending"].startswith("report:"):
                 companion_request(con, user["id"], profile["pending"][7:], text, f"update:{update['update_id']}")
                 con.execute("UPDATE profiles SET pending='' WHERE user_id=?", (user["id"],))
-                queue(con, user["id"], "«Рапорт передан ГМ. Выдача станет доступна после согласования».", home_keyboard())
+                queue(con, user["id"], "«Ожидание согласования на выдачу «Мистериума». Пожалуйста, ожидайте».", home_keyboard())
             elif data.startswith("collect:"):
                 collect_companion(con, user["id"], data.split(":", 1)[1])
             con.execute("INSERT INTO updates VALUES(?,?)", (update["update_id"], int(time.time())))
@@ -662,8 +662,8 @@ def handle_private_update(update):
                   "«Контроллер готов к обслуживанию. Укажите цель обращения».", home_keyboard())
         elif text.startswith("/mysterium") or data == "mysterium":
             prompt = new_prompt(con, user_id, "degree")
-            queue(con, user_id, "Протектрон разворачивает диагностическую панель. «Для подготовки индивидуальной дозы "
-                  "укажите степень гулификации вашего персонажа».\n\n<b>Какова ваша степень гулификации?</b>",
+            queue(con, user_id, "Протектрон разворачивает диагностическую панель. «Для подготовки препарата "
+                  "укажите степень гулификации Вашего персонажа».\n\n<b>Какова Ваша степень гулификации?</b>",
                   keyboard([[cb(f"{ROMAN[d]} степень · {d} ед.", f"degree:{prompt}:{d}")] for d in ROMAN]
                            + [[cb("Вернуться", "home")]]))
         elif data.startswith("degree:"):
@@ -681,7 +681,7 @@ def handle_private_update(update):
             prompt = new_prompt(con, user_id, "access-service")
             choices = [cb(f"{item['code']} · {item['name']}", f"accessservice:{prompt}:{item['code']}") for item in ACCESS_CATALOG["services"]]
             queue(con, user_id, "На панели Протектрона загорается индикатор допуска. «Уточните, какой именно доступ "
-                  "вам требуется повысить».\n\n<b>Выберите службу:</b>",
+                  "Вам требуется повысить».\n\n<b>Выберите службу:</b>",
                   keyboard([choices[i:i + 2] for i in range(0, len(choices), 2)] + [[cb("Вернуться", "home")]]))
         elif data.startswith("accessservice:"):
             require_character(con, user_id)
@@ -719,7 +719,7 @@ def handle_private_update(update):
             if item:
                 rows = [[cb("Другой вопрос", "faq"), cb("Вернуться", "home")]]
                 if item["id"] == "materials":
-                    rows.insert(0, [{"text": "DOTD Dossier", "url": "https://dotdossier.com/"},
+                    rows.insert(0, [{"text": "Материалы проекта", "url": "https://t.me/dawnofthed3ad"},
                                     {"text": "Архив Starfield", "url": "https://starfield-archive.netlify.app/"}])
                 queue(con, user_id, f"<b>{html.escape(item['question'])}</b>\n\n«{html.escape(item['answer'])}»", keyboard(rows))
         elif data == "history" or text.startswith("/history"):
@@ -751,7 +751,7 @@ def handle_private_update(update):
                     queue(con, user_id, f"«{html.escape(match['answer'])}»", home_keyboard())
                 else:
                     queue(con, user_id, "«В справочном модуле нет точного ответа на этот вопрос. "
-                          "Обратитесь к мастеру или выберите раздел из меню».", home_keyboard())
+                          "Пожалуйста, выберите раздел справочного модуля».", home_keyboard())
 
 
 def outbox_worker():

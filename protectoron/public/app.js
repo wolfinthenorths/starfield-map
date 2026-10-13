@@ -5,12 +5,12 @@ const real = Boolean(initData);
 const $ = id => document.getElementById(id);
 const roman = {1:'I',2:'II',3:'III'};
 const fallbackFaq = [
-  {id:'purpose',question:'Для чего нужен мистериум?',answer:'Мистериум необходим для поддержания контроля при гулификации. Полная доза: I степень — 1 единица, II — 2 единицы, III — 3 единицы.'},
-  {id:'interval',question:'Как часто принимать дозу?',answer:'Полная доза нужна каждые 10 собственных игровых ходов. Выдача препарата не считается его приёмом.'},
+  {id:'purpose',question:'Для чего нужен мистериум?',answer:'Мистериум необходим для поддержания контроля при гулификации. Количество препарата: I степень — 1 единица, II — 2 единицы, III — 3 единицы.'},
+  {id:'interval',question:'Как часто нужно принимать препарат?',answer:'Препарат необходимо принимать в полном назначенном количестве каждые 10 Ваших игровых ходов. Получение препарата не считается его приёмом.'},
   {id:'turn',question:'Что считается ходом?',answer:'Собственный игровой пост с действием, в том числе передвижением или отыгрышем реквеста. Обычные диалоги, спасброски, технические сообщения и дополнительные ответы не засчитываются.'},
-  {id:'missed',question:'Что будет при пропуске приёма?',answer:'После первых 10 ходов без новой дозы: следующие ходы 1–3 — помеха, 4-й — мастер может изменить реквест, 5-й — полная передача управления мастеру. Полная доза возвращает контроль и сбрасывает счётчик.'},
+  {id:'missed',question:'Что будет при пропуске приёма?',answer:'После первых 10 ходов без нового приёма препарата: следующие ходы 1–3 — помеха, на 4-м условия проверок могут быть изменены, на 5-м наступает полная потеря контроля над персонажем. Приём полного назначенного количества препарата восстанавливает контроль и сбрасывает счётчик.'},
   {id:'access',question:'Как повысить доступ?',answer:'Выберите службу и нужный уровень полномочий. Повышение квалификации проводится через тест; ссылка будет добавлена позже. Уровни разных служб учитываются отдельно. Ω не является пятым уровнем и не выдаётся штатным сотрудникам.'},
-  {id:'materials',question:'Где найти материалы проекта?',answer:'Материалы проекта доступны на DOTD Dossier и в архиве Starfield. Действующие условия конкретной сцены уточняет мастер.'}
+  {id:'materials',question:'Где найти материалы проекта?',answer:'Материалы проекта доступны в Telegram: https://t.me/dawnofthed3ad. Архив Starfield также доступен в справочном модуле.'}
 ];
 let profile = {name:'Посетитель',character:'',degree:null,access_level:1};
 let events = [], degree = null, busy = false, opened = false, frame = 0;
@@ -38,6 +38,7 @@ const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matc
 let issuanceKey = null, accessKey = null;
 let accessCatalog=null,selectedService=null;
 let ownCharacter=null,characters=[],requests=[],selectedRecipient=null,companionKey=null,gmConnected=false;
+let waitingRequestId=null;
 function freshKey(){return crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;}
 function haptic(type='light'){try {tg?.HapticFeedback?.impactOccurred(type);} catch {}}
 function play(name){
@@ -50,7 +51,7 @@ function updateSound(){ $('sound').setAttribute('aria-pressed',String(sound));$(
 function showError(text){$('error').textContent=text;$('error').hidden=false;play('denied');}
 function clearError(){$('error').hidden=true;}
 async function api(path, data={}){
-  if(!real) throw new Error('Откройте терминал из личного чата с @ptotectoronbot.');
+  if(!real) throw new Error('Откройте робота из личного чата с @ptotectoronbot.');
   let response;
   try {response=await fetch(`/api/${path}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({initData,...data}),signal:AbortSignal.timeout(20000)});}
   catch {throw new Error('Нет связи с контроллером. Проверьте соединение и повторите обращение.');}
@@ -77,10 +78,10 @@ function sync(data){
     if(!opened)degree=ownCharacter.degree;
     $('own-name').textContent=ownCharacter.name;
     $('own-details').textContent=ownCharacter.class+(ownCharacter.degree?` · ${roman[ownCharacter.degree]} степень гулификации`:'');
-    $('own-dose-note').textContent=ownCharacter.eligible?`Полная доза по реестру: ${ownCharacter.degree} ${ownCharacter.degree===1?'единица':'единицы'}.`:'Личная выдача мистериума для вашего класса недоступна. Для товарища можно подать рапорт.';
+    $('own-dose-note').textContent=ownCharacter.eligible?`Назначенное количество препарата: ${ownCharacter.degree} ${ownCharacter.degree===1?'единица':'единицы'}.`:'Личная выдача мистериума для Вашего класса недоступна. Для получения препарата с целью передачи иному лицу — напишите рапорт.';
     $('dispense-button').disabled=!real||!ownCharacter.eligible;
     $('companion-open').disabled=!real||!gmConnected;
-    if(!opened)$('robot-speech').textContent=`«${ownCharacter.name}. Данные реестра проверены. Укажите цель обращения».`;
+    if(!opened)$('robot-speech').textContent=`«Добрый день, ${ownCharacter.name}! Данные реестра проверены, укажите цель обращения?»`;
   }
   renderRequests();
   if(data.accesses&&!accessCatalog){accessCatalog=data.accesses;renderAccesses();}
@@ -94,7 +95,7 @@ function renderHistory(){
     const img=document.createElement('img');img.src=event.kind==='dispense'?'/assets/mysterium.webp':'/assets/terminal-cut.png';img.alt='';
     const body=document.createElement('div'),title=document.createElement('strong'),desc=document.createElement('p'),date=document.createElement('time');
     title.textContent=event.kind==='dispense'?'Выдача мистериума':'Запрос на повышение доступа';
-    desc.textContent=event.kind==='dispense'?`${roman[event.payload.degree]} степень · ${event.payload.units} ${event.payload.units===1?'единица':'единицы'} · полная доза`:`${event.payload.target} · ожидает тестирования`;
+    desc.textContent=event.kind==='dispense'?`${roman[event.payload.degree]} степень · ${event.payload.units} ${event.payload.units===1?'единица':'единицы'} препарата`:`${event.payload.target} · ожидает тестирования`;
     const time=new Date(event.created_at*1000);date.dateTime=time.toISOString();date.textContent=time.toLocaleString('ru-RU',{day:'2-digit',month:'long',hour:'2-digit',minute:'2-digit'});
     body.append(title,desc,date);el.append(img,body);list.append(el);
   }
@@ -142,20 +143,20 @@ async function animateOpen(){
     function tick(now){const p=Math.min(1,(now-start)/850);frame=Math.min(9,Math.floor(p*10));drawScene();if(p<1)requestAnimationFrame(tick);else{opened=true;drawScene();resolve();}}
     requestAnimationFrame(tick);
   });
-  $('scene-state').textContent='КАССЕТА ДОСТУПНА';
+  $('scene-state').textContent='ПРЕПАРАТ ДОСТУПЕН';
   canvas.setAttribute('aria-label',`Робот-контроллер рядом с открытым контейнером: ${degree||1} единиц мистериума`);
 }
 function showReceipt(receipt){
   degree=receipt.degree;$('degree-panel').hidden=true;$('receipt-panel').hidden=false;
-  $('receipt-dose').textContent=`${receipt.units} ${receipt.units===1?'единица':'единицы'} · полная доза`;
+  $('receipt-dose').textContent=`${receipt.units} ${receipt.units===1?'единица':'единицы'} препарата`;
   if(receipt.for_companion)$('receipt-dose').textContent+=` · для ${receipt.recipient}`;
   $('scene-hint').textContent=`Степень ${roman[degree]} · выдача зафиксирована`;
-  $('robot-speech').textContent=receipt.for_companion?`«Рапорт согласован. Полная доза для ${receipt.recipient} подготовлена».`:`«Степень гулификации ${roman[degree]}. Индивидуальная доза подготовлена. Пожалуйста, соблюдайте интервал приёма».`;
+  $('robot-speech').textContent=receipt.for_companion?`«Рапорт согласован. Препарат для ${receipt.recipient} подготовлен».`:`«Степень гулификации ${roman[degree]}. Препарат подготовлен. Пожалуйста, соблюдайте интервал приёма».`;
 }
 function selectDegree(value){
   degree=value;document.querySelectorAll('[data-degree]').forEach(button=>{const selected=Number(button.dataset.degree)===value;button.classList.toggle('selected',selected);button.setAttribute('aria-pressed',String(selected));});
   $('dispense-button').disabled=busy||!real;
-  $('robot-speech').textContent=`«Степень гулификации ${roman[value]} принята. Полная доза — ${value} ${value===1?'единица':'единицы'}. Контейнер готов к выдаче».`;
+  $('robot-speech').textContent=`«Степень гулификации ${roman[value]} принята. Назначенное количество препарата — ${value} ${value===1?'единица':'единицы'}. Контейнер готов к выдаче».`;
   $('scene-hint').textContent=`Подготовлена дозировка для ${roman[value]} степени`;play('click');haptic();
 }
 document.querySelectorAll('[data-tab]').forEach(button=>button.addEventListener('click',()=>setTab(button.dataset.tab)));
@@ -174,7 +175,7 @@ $('dispense-button').addEventListener('click',async()=>{
   finally{busy=false;$('dispense-button').firstElementChild.textContent='Получить мистериум';}
 });
 $('again-button').addEventListener('click',()=>{
-  if(busy)return;play('box-close');opened=false;frame=0;degree=ownCharacter?.degree||null;issuanceKey=null;drawScene();$('receipt-panel').hidden=true;$('degree-panel').hidden=!ownCharacter;$('scene-state').textContent='ЗАМОК ЗАКРЫТ';$('scene-hint').textContent='Ожидание обращения';$('robot-speech').textContent='«Доза определяется по реестру персонажей. Укажите цель обращения».';$('dispense-button').disabled=!real||!ownCharacter?.eligible;
+  if(busy)return;play('box-close');opened=false;frame=0;degree=ownCharacter?.degree||null;issuanceKey=null;drawScene();$('receipt-panel').hidden=true;$('degree-panel').hidden=!ownCharacter;$('scene-state').textContent='ЗАМОК ЗАКРЫТ';$('scene-hint').textContent='Ожидание обращения';$('robot-speech').textContent=ownCharacter?`«Добрый день, ${ownCharacter.name}! Данные реестра проверены, укажите цель обращения?»`:'«Назовите Вашего персонажа для проверки реестра».';$('dispense-button').disabled=!real||!ownCharacter?.eligible;
 });
 async function requestAccess(target){
   if(busy||!real)return;busy=true;clearError();document.querySelectorAll('[data-access-level]').forEach(b=>b.disabled=true);
@@ -204,16 +205,38 @@ function renderRecipients(){
 }
 $('companion-open').addEventListener('click',()=>{if(!ownCharacter)return;$('companion-panel').hidden=false;$('degree-panel').hidden=true;selectedRecipient=null;companionKey=null;$('companion-send').disabled=true;renderRecipients();});
 $('companion-back').addEventListener('click',()=>{if(busy)return;$('companion-panel').hidden=true;$('degree-panel').hidden=!ownCharacter;});
-$('companion-form').addEventListener('submit',async e=>{e.preventDefault();if(busy||!selectedRecipient)return;busy=true;$('companion-send').disabled=true;if(!companionKey)companionKey=freshKey();try{const data=await api('companion',{recipient:selectedRecipient,report:$('companion-report').value,requestId:companionKey});sync(data);$('companion-status').textContent='Рапорт отправлен ГМ. После согласования появится кнопка получения дозы.';companionKey=null;play('confirm');}catch(error){showError(error.message);}finally{busy=false;$('companion-send').disabled=!real;}});
+$('companion-form').addEventListener('submit',async e=>{e.preventDefault();if(busy||!selectedRecipient)return;busy=true;$('companion-send').disabled=true;if(!companionKey)companionKey=freshKey();try{const data=await api('companion',{recipient:selectedRecipient,report:$('companion-report').value,requestId:companionKey});sync(data);$('companion-status').textContent='Ожидание согласования на выдачу «Мистериума»';showWaiting(data.request.id);companionKey=null;play('confirm');}catch(error){showError(error.message);}finally{busy=false;$('companion-send').disabled=!real;}});
+function showWaiting(requestId){
+  const request=requests.find(item=>item.id===requestId);
+  if(!request||request.status!=='pending')return;
+  waitingRequestId=requestId;
+  $('waiting-recipient').textContent=`Получатель: ${request.recipient_name}`;
+  const dialog=$('waiting-dialog');
+  if(!dialog.open)dialog.showModal();
+}
+$('waiting-minimize').addEventListener('click',()=>{$('waiting-dialog').close();});
+function updateWaiting(){
+  if(!waitingRequestId)return;
+  const request=requests.find(item=>item.id===waitingRequestId);
+  if(!request||request.status!=='pending'){
+    if($('waiting-dialog').open)$('waiting-dialog').close();
+    $('companion-status').textContent=request?.status==='approved'?'Выдача «Мистериума» согласована. Препарат доступен к получению.':request?.status==='rejected'?'Выдача «Мистериума» не согласована.':'Состояние обращения обновлено.';
+    waitingRequestId=null;
+    return;
+  }
+  $('robot-speech').textContent='«Ожидание согласования на выдачу «Мистериума». Пожалуйста, ожидайте».';
+}
 function renderRequests(){
   const list=$('requests-list');list.replaceChildren();
-  for(const request of requests.filter(item=>item.kind==='companion')){const card=document.createElement('article');card.className='request-card';const title=document.createElement('strong'),status=document.createElement('p');title.textContent=`Для ${request.recipient_name} · ${request.degree} ед.`;status.textContent={pending:'Рапорт ожидает решения ГМ',approved:'Рапорт согласован. Доза доступна к получению',rejected:'Рапорт отклонён ГМ',issued:'Согласованная доза получена'}[request.status]||request.status;card.append(title,status);
-    if(request.status==='approved'){const button=document.createElement('button');button.type='button';button.className='secondary-button';button.textContent='Получить согласованную дозу';button.addEventListener('click',async()=>{if(busy)return;busy=true;button.disabled=true;play('click');try{const data=await api('collect',{id:request.id});sync(data);degree=data.receipt.degree;$('companion-panel').hidden=true;setTab('dispense');await animateOpen();showReceipt(data.receipt);play('confirm');}catch(error){showError(error.message);button.disabled=false;}finally{busy=false;}});card.append(button);}list.append(card);
+  for(const request of requests.filter(item=>item.kind==='companion')){const card=document.createElement('article');card.className='request-card';const title=document.createElement('strong'),status=document.createElement('p');title.textContent=`Для ${request.recipient_name} · ${request.degree} ед.`;status.textContent={pending:'Ожидание согласования на выдачу «Мистериума»',approved:'Выдача «Мистериума» согласована. Препарат доступен к получению',rejected:'Выдача «Мистериума» не согласована',issued:'Препарат получен'}[request.status]||request.status;card.append(title,status);
+    if(request.status==='pending'){const button=document.createElement('button');button.type='button';button.className='secondary-button';button.textContent='Ожидайте';button.addEventListener('click',()=>showWaiting(request.id));card.append(button);}
+    if(request.status==='approved'){const button=document.createElement('button');button.type='button';button.className='secondary-button';button.textContent='Получить препарат';button.addEventListener('click',async()=>{if(busy)return;busy=true;button.disabled=true;play('click');try{const data=await api('collect',{id:request.id});sync(data);degree=data.receipt.degree;$('companion-panel').hidden=true;setTab('dispense');await animateOpen();showReceipt(data.receipt);play('confirm');}catch(error){showError(error.message);button.disabled=false;}finally{busy=false;}});card.append(button);}list.append(card);
   }
+  updateWaiting();
 }
 setInterval(async()=>{if(!real||busy||document.hidden||!requests.some(item=>item.status==='pending'||item.status==='approved'))return;try{sync(await api('state'));}catch{}},10000);
 async function loadSprites(){
-  await Promise.all(Object.entries({case:'box-cut.png',opening:'boxOpening-cut.png',robot:'robotSprite-cut.png',floor:'floor-cut.png',vial:'mysterium.webp'}).map(([key,file])=>new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>{sprites[key]=img;resolve();};img.onerror=()=>reject(new Error('Не удалось загрузить спрайты. Обновите терминал.'));img.src=`/assets/${file}`;})));
+  await Promise.all(Object.entries({case:'box-cut.png',opening:'boxOpening-cut.png',robot:'robotSprite-cut.png',floor:'floor-cut.png',vial:'mysterium.webp'}).map(([key,file])=>new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>{sprites[key]=img;resolve();};img.onerror=()=>reject(new Error('Не удалось загрузить спрайты. Обновите робота.'));img.src=`/assets/${file}`;})));
   drawScene();
 }
 async function start(){
@@ -229,7 +252,7 @@ async function start(){
       if(receipt){degree=receipt.payload.degree;await animateOpen();showReceipt({...receipt.payload,id:receipt.id});}
     }catch(e){$('connection-label').textContent='Нет связи с контроллером';showError(e.message);}
   }else{
-    $('connection-label').textContent='Просмотр терминала';$('demo-notice').hidden=false;
+    $('connection-label').textContent='Просмотр робота';$('demo-notice').hidden=false;
     $('profile-form').querySelector('button').disabled=true;
     $('registration-form').querySelector('button').disabled=true;
   }

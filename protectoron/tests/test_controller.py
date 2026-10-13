@@ -222,6 +222,21 @@ class ControllerTests(unittest.TestCase):
             with self.assertRaises(ValueError): server.self_issue(con, 202, "raider", False)
             self.assertEqual(server.register_character(con, 202, "Цифер"), "verified")
 
+    def test_private_greeting_and_report_decision_use_robot_language(self):
+        server.handle_update({"update_id": 90, "message": {"chat": {"id": 101, "type": "private"}, "from": {"id": 101}, "text": "/menu"}})
+        with server.db() as con:
+            welcome = json.loads(con.execute("SELECT payload FROM outbox WHERE user_id=101").fetchone()[0])["text"]
+            self.assertIn("Добрый день, Цифер! Данные реестра проверены, укажите цель обращения?", welcome)
+            report = server.companion_request(con, 202, "Цифер", "Товарищ не может прийти самостоятельно", "robot-text", "chat")
+            server.decide_request(con, {"id": 901, "username": "VaultTecGm"}, report["id"], "approve")
+            for row in con.execute("SELECT payload FROM outbox WHERE user_id>0"):
+                payload = json.loads(row[0])
+                self.assertNotIn("ГМ", payload["text"])
+                self.assertNotIn("дозу", payload["text"])
+                if "согласован" in payload["text"]:
+                    self.assertEqual(payload["reply_markup"]["inline_keyboard"][0][0]["text"], "Получить препарат")
+            self.assertEqual(next(item for item in server.FAQ if item["id"] == "interval")["question"], "Как часто нужно принимать препарат?")
+
     def test_companion_approval_is_not_issuance_and_collection_is_once(self):
         with server.db() as con:
             request = server.companion_request(con, 202, "Цифер", "Товарищ ранен и не может прийти сам", "buddy", "app")
