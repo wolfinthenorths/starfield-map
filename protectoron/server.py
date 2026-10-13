@@ -225,7 +225,7 @@ def app_button(label="Открыть робота", query=""):
 
 def home_keyboard():
     rows = [[cb("Получить мистериум", "mysterium")],
-            [cb("Взять для товарища", "companion")],
+            [cb("Согласование выдачи дозы для иного лица", "companion")],
             [cb("Повысить доступ", "access"), cb("Задать вопрос", "faq")],
             [cb("Мой журнал", "history"), cb("Имя персонажа", "character")]]
     if APP_URL:
@@ -311,7 +311,7 @@ def self_issue(con, user_id, key, notify=True):
 def report_message(con, request):
     profile = con.execute("SELECT * FROM profiles WHERE user_id=?", (request["user_id"],)).fetchone()
     actor = "@" + profile["username"] if profile["username"] else f"ID:{request['user_id']}"
-    title = "ПРИВЯЗКА ПЕРСОНАЖА" if request["kind"] == "registration" else "ВЫДАЧА МИСТЕРИУМА ТОВАРИЩУ"
+    title = "ПРИВЯЗКА ПЕРСОНАЖА" if request["kind"] == "registration" else "Согласование выдачи дозы для иного лица"
     text = f"<b>{title}</b>\n\nИгрок: <a href=\"tg://user?id={request['user_id']}\">{html.escape(actor)}</a>\nПерсонаж игрока: {html.escape(profile['character'] or 'не зарегистрирован')}\n"
     text += f"{'Имя для регистрации' if request['kind']=='registration' else 'Получатель'}: <b>{html.escape(request['recipient_name'])}</b>\n"
     if request["degree"]:
@@ -535,7 +535,7 @@ def handle_update(update):
                         set_setting(con, "gm_chat_id", chat["id"])
                         set_setting(con, "gm_thread_id", message.get("message_thread_id"))
                         set_setting(con, "gm_chat_title", chat.get("title", "ГМ"))
-                        queue(con, chat["id"], "<b>Чат ГМ привязан.</b>\nРапорты для выдачи товарищу будут приходить сюда. Согласовывать могут только @VaultTecGm и @gj0xl.", thread_id=message.get("message_thread_id"))
+                        queue(con, chat["id"], "<b>Чат ГМ привязан.</b>\nРапорты на выдачу препарата иному лицу будут приходить сюда. Согласовывать могут только @VaultTecGm и @gj0xl.", thread_id=message.get("message_thread_id"))
                 else:
                     if chat["id"] != setting(con, "gm_chat_id") or (setting(con, "gm_thread_id") and message.get("message_thread_id") != setting(con, "gm_thread_id")):
                         return
@@ -609,7 +609,7 @@ def handle_update(update):
                 if not own["eligible"]:
                     raise ValueError("Личная выдача мистериума для Вашего класса недоступна. Для получения препарата с целью передачи иному лицу — напишите рапорт.")
                 prompt = new_prompt(con, user["id"], "self-dose")
-                queue(con, user["id"], f"«{html.escape(own['name'])}, согласно реестру для {ROMAN[own['degree']]} степени гулификации Вам назначено {own['degree']} ед. препарата; контейнер подготовлен, и Вы можете подтвердить получение».", keyboard([[cb("Получить препарат", "self:" + prompt)], [cb("Взять для товарища", "companion")], [cb("Вернуться", "home")]]))
+                queue(con, user["id"], f"«{html.escape(own['name'])}, согласно реестру для {ROMAN[own['degree']]} степени гулификации Вам назначено {own['degree']} ед. препарата; контейнер подготовлен, и Вы можете подтвердить получение».", keyboard([[cb("Получить препарат", "self:" + prompt)], [cb("Согласование выдачи дозы для иного лица", "companion")], [cb("Вернуться", "home")]]))
             elif data.startswith("self:"):
                 key = data.split(":", 1)[1]
                 if not consume_prompt(con, key, user["id"], "self-dose"):
@@ -621,7 +621,7 @@ def handle_update(update):
                 if not candidates:
                     raise ValueError("В реестре нет другого персонажа, которому доступен препарат.")
                 prompt = new_prompt(con, user["id"], "buddy-picker", {"names": [item["name"] for item in candidates]})
-                queue(con, user["id"], "«Укажите товарища, для которого требуется препарат, чтобы я мог проверить назначенное ему количество по реестру».", keyboard([[cb(item["name"], f"buddy:{prompt}:{index}")] for index, item in enumerate(candidates)] + [[cb("Вернуться", "home")]]))
+                queue(con, user["id"], "«Укажите получателя препарата, чтобы я мог проверить назначенное ему количество по реестру».", keyboard([[cb(item["name"], f"buddy:{prompt}:{index}")] for index, item in enumerate(candidates)] + [[cb("Вернуться", "home")]]))
             elif data.startswith("buddy:"):
                 _, key, index = data.split(":")
                 prompt = con.execute("SELECT payload FROM prompts WHERE id=? AND user_id=?", (key, user["id"])).fetchone()
@@ -633,7 +633,7 @@ def handle_update(update):
                     raise ValueError("Выберите получателя из списка")
                 name = names[i]
                 con.execute("UPDATE profiles SET pending=? WHERE user_id=?", ("report:" + name, user["id"]))
-                queue(con, user["id"], f"«По какой причине товарищ {html.escape(name)} не может получить препарат самостоятельно?»\n\nОтправьте рапорт следующим сообщением — от 5 до 1200 символов.", {"force_reply": True, "input_field_placeholder": "Короткий рапорт"})
+                queue(con, user["id"], f"«По какой причине {html.escape(name)} не может получить препарат самостоятельно?»\n\nОтправьте рапорт следующим сообщением — от 5 до 1200 символов.", {"force_reply": True, "input_field_placeholder": "Короткий рапорт"})
             elif text and not text.startswith("/") and profile["pending"].startswith("report:"):
                 companion_request(con, user["id"], profile["pending"][7:], text, f"update:{update['update_id']}")
                 con.execute("UPDATE profiles SET pending='' WHERE user_id=?", (user["id"],))

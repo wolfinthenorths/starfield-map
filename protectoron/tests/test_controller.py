@@ -237,6 +237,20 @@ class ControllerTests(unittest.TestCase):
                     self.assertEqual(payload["reply_markup"]["inline_keyboard"][0][0]["text"], "Получить препарат")
             self.assertEqual(next(item for item in server.FAQ if item["id"] == "interval")["question"], "Как часто нужно принимать препарат?")
 
+    def test_another_person_issuance_uses_neutral_labels(self):
+        expected = "Согласование выдачи дозы для иного лица"
+        buttons = [item for row in server.home_keyboard()["inline_keyboard"] for item in row]
+        self.assertEqual(next(item["text"] for item in buttons if item.get("callback_data") == "companion"), expected)
+        page = (Path(server.__file__).parent / "public" / "index.html").read_text(encoding="utf-8")
+        self.assertIn(f'type="button">{expected}</button>', page)
+        self.assertIn("По какой причине получатель не может получить препарат самостоятельно?", page)
+        self.assertNotIn("товарищ", page.lower())
+        with server.db() as con:
+            request = server.companion_request(con, 202, "Цифер", "Получатель не может прийти самостоятельно", "neutral-copy", "app")
+            message = server.report_message(con, request)
+            self.assertIn(f"<b>{expected}</b>", message)
+            self.assertNotIn("товарищ", message.lower())
+
     def test_companion_approval_is_not_issuance_and_collection_is_once(self):
         with server.db() as con:
             request = server.companion_request(con, 202, "Цифер", "Товарищ ранен и не может прийти сам", "buddy", "app")
