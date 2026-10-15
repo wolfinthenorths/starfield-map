@@ -55,8 +55,11 @@ function clearError(){$('error').hidden=true;}
 async function api(path, data={}){
   if(!real) throw new Error('Откройте робота из личного чата с @ptotectoronbot.');
   let response;
-  try {response=await fetch(`/api/${path}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({initData,...data}),signal:AbortSignal.timeout(20000)});}
-  catch {throw new Error('Связь с контроллером прервалась; пожалуйста, проверьте соединение и повторите обращение.');}
+  // Sheets requests can include a registry refresh and Google's redirect;
+  // acquisition also verifies the ledger before committing the same request ID.
+  const timeout=path==='perks'?90000:path==='perk-acquire'?150000:20000;
+  try {response=await fetch(`/api/${path}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({initData,...data}),signal:AbortSignal.timeout(timeout)});}
+  catch {throw new Error(path==='perks'?'Не удалось дождаться сведений из реестра. Ваш персонаж выбран; нажмите «Обновить сведения», чтобы повторить проверку.':'Связь с контроллером прервалась; пожалуйста, проверьте соединение и повторите обращение.');}
   const result=await response.json();
   if(!response.ok){const error=new Error(result.error||'Контроллер временно недоступен.');error.definitive=response.status>=400&&response.status<500;throw error;}
   return result;
@@ -89,6 +92,7 @@ function sync(data){
   renderRequests();
   if(data.accesses&&!accessCatalog){accessCatalog=data.accesses;renderAccesses();}
   renderHistory();renderFaq(data.faq||fallbackFaq);
+  syncPerkIdentity();
   if(data.shop)syncPerks(data.shop);
 }
 function renderHistory(){
@@ -281,6 +285,16 @@ async function start(){
 
 let perkCatalog=null,shop=null,perkFilter='small',perkLoading=false,perkSelection=null,pendingPerk=null;
 const classSkillNames=['Анализ','История','Расследование','Инженерия','Медицина','Убеждение'];
+function syncPerkIdentity(){
+  const name=ownCharacter?.name||'Персонаж не указан';
+  if($('perk-character').textContent!==name){
+    shop=null;
+    $('perk-level').textContent='—';$('perk-points').textContent='—';
+    $('perk-free-count').textContent='Бесплатные выборы за уровень: —';
+    renderPerks();renderClassPerk();
+  }
+  $('perk-character').textContent=name;
+}
 function pointsWord(value){const n=Math.abs(value)%100,last=n%10;return n>10&&n<20?'очков':last===1?'очко':last>=2&&last<=4?'очка':'очков';}
 function pendingStorageKey(id){return `protectoron-perk-${tg?.initDataUnsafe?.user?.id||'user'}-${id}`;}
 function savePendingPerk(value){const previousId=pendingPerk?.characterId||shop?.character_id;pendingPerk=value;try{if(value)localStorage.setItem(pendingStorageKey(value.characterId),JSON.stringify(value));else if(previousId)localStorage.removeItem(pendingStorageKey(previousId));}catch{}$('perk-pending').hidden=!pendingPerk;}
@@ -301,12 +315,16 @@ function syncPerks(data){
   renderPerks();renderClassPerk();
 }
 async function loadPerks(){
+  syncPerkIdentity();
   if(perkLoading)return;
   if(!real||!ownCharacter){shop=null;$('perk-status').textContent=real?'Сначала укажите имя Вашего персонажа в разделе выдачи.':'Получение доступно после открытия робота из личного чата Telegram.';renderPerks();return;}
   perkLoading=true;$('perk-refresh').disabled=true;
-  try{sync(await api('perks'));}
-  catch(error){shop=null;renderPerks();$('perk-status').textContent=error.message;}
-  finally{perkLoading=false;$('perk-refresh').disabled=false;}
+  const character=ownCharacter.name;
+  $('perk-status').textContent='Проверяю уровень персонажа, доступные очки и полученные перки по реестру. Пожалуйста, ожидайте.';
+  const slowNotice=setTimeout(()=>{if(ownCharacter?.name===character)$('perk-status').textContent='Реестр отвечает дольше обычного. Проверка продолжается; повторно нажимать кнопку не нужно.';},8000);
+  try{const result=await api('perks');if(ownCharacter?.name===character)sync(result);}
+  catch(error){if(ownCharacter?.name===character){shop=null;renderPerks();renderClassPerk();$('perk-level').textContent='—';$('perk-points').textContent='—';$('perk-free-count').textContent='Сведения о выборах за уровень пока не загружены.';$('perk-status').textContent=error.message;}}
+  finally{clearTimeout(slowNotice);perkLoading=false;$('perk-refresh').disabled=false;if(ownCharacter&&ownCharacter.name!==character)loadPerks();}
 }
 function canGetPerk(perk,mode){
   if(!real||busy||!shop?.can_acquire||pendingPerk||shop.owned.some(item=>item.perk_id===perk.id))return false;

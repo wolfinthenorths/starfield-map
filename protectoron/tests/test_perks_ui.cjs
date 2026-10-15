@@ -14,12 +14,13 @@ class Element{
 }
 const elements=new Map(),storage=new Map(),catalog=JSON.parse(fs.readFileSync('public/perks.json','utf8'));
 const $=id=>{if(!elements.has(id))elements.set(id,new Element());return elements.get(id);};
-let calls=[],sequence=0,transport;
+let calls=[],sequence=0,transport,slowNotice;
 const context=vm.createContext({console,JSON,Math,Number,Array,Set,String,Error,
   document:{createElement:tag=>new Element(tag),querySelectorAll:()=>[],hidden:false},$,real:true,busy:false,
   ownCharacter:{name:'Цифер'},tg:{initDataUnsafe:{user:{id:101}}},freshKey:()=>`request-${++sequence}`,
   localStorage:{getItem:k=>storage.get(k)??null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},
   play(){},haptic(){},clearError(){},showError(){},setInterval(){},
+  setTimeout(fn){slowNotice=fn;return 1;},clearTimeout(){slowNotice=null;},
   api:async(path,data)=>{calls.push({path,data});return transport(path,data);},
   sync:data=>context.syncPerks(data.shop)});
 const source=fs.readFileSync('public/app.js','utf8');
@@ -50,5 +51,25 @@ transport=async()=>{throw Error('simulated lost response');};
   const inputs=$('perk-class').querySelectorAll('input'),button=$('perk-class').querySelector('button');
   inputs[0].checked=true;inputs[0].events.change();assert.equal(button.disabled,true);inputs[1].checked=true;inputs[1].events.change();assert.equal(button.disabled,false);assert.equal(inputs[2].disabled,true);
   context.syncPerks(state({class_id:'twice_learned_chemist',class_skills:['Анализ','История']}));assert.equal($('perk-class').querySelectorAll('input').length,0);
-  console.log('Perk UI: level/balance, independent free choice, stable cards, cancellation, durable replay and class skills verified');
+  await new Promise(setImmediate);
+  context.ownCharacter={name:'Лоча'};
+  let finish;
+  transport=()=>new Promise(resolve=>{finish=resolve;});
+  const loading=context.loadPerks();
+  assert.equal($('perk-character').textContent,'Лоча');
+  assert.equal($('perk-points').textContent,'—');
+  assert.equal($('perk-refresh').disabled,true);
+  slowNotice();assert.match($('perk-status').textContent,/Проверка продолжается/);
+  const count=calls.length;await context.loadPerks();assert.equal(calls.length,count);
+  finish({shop:state({character:'Лоча',character_id:'character-locha'})});await loading;
+  assert.equal($('perk-points').textContent,'10');assert.equal(slowNotice,null);
+  transport=async()=>{throw Error('Реестр временно недоступен');};
+  await context.loadPerks();
+  assert.equal($('perk-character').textContent,'Лоча');
+  assert.equal($('perk-points').textContent,'—');assert.equal($('perk-refresh').disabled,false);
+  assert.equal(card.querySelector('.perk-buy').disabled,true);
+  assert.match($('perk-status').textContent,/Реестр временно недоступен/);
+  transport=async()=>({shop:state({character:'Лоча',character_id:'character-locha',points:4})});
+  await context.loadPerks();assert.equal($('perk-points').textContent,'4');
+  console.log('Perk UI: slow response, failed read, retry, known identity, balance, free choice and durable purchase replay verified');
 })().catch(error=>{console.error(error);process.exitCode=1;});

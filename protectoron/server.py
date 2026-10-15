@@ -973,7 +973,8 @@ class Handler(BaseHTTPRequestHandler):
             if str(exc) in BUSINESS_ERRORS:
                 self.reply(400, {"error": perks.MESSAGES.get(str(exc), "Оформление развития недоступно. Обновите модуль и повторите обращение.")})
             else:
-                print("Perk shop temporarily unavailable; retry uses the same request ID", flush=True)
+                diagnostic = str(exc) if str(exc) in {"connection_failed", "request_rejected", "invalid_response", "inventory_mismatch", "catalog_mismatch", "not_configured"} else "unknown"
+                print(f"Perk shop temporarily unavailable ({diagnostic}); retry uses the same request ID", flush=True)
                 self.reply(503, {"error": "Связь с модулем развития прервалась. Обновите сведения или повторите то же обращение, чтобы проверить результат без повторного списания."})
         except ValueError as exc:
             self.reply(400, {"error": str(exc)})
