@@ -34,6 +34,7 @@ function doPost(e) {
       .map(b=>('0'+((b+256)%256).toString(16)).slice(-2)).join('');
     if(!same_(signature,request.signature)) throw new Error('unauthorized');
     const payload=JSON.parse(request.payload);
+    if(String(payload.action||'').startsWith('market_')&&typeof marketDispatch_==='function')return json_(marketDispatch_(payload));
     if(payload.action==='verify_connection') return json_(verifyConnection());
     if(payload.action==='balance') return json_(balance_(payload.character));
     if(payload.action==='shop_state') return json_(shopState(payload.character));
@@ -87,11 +88,12 @@ function entry_(registry,name) {
   if(matches.length!==1) throw new Error(matches.length?'ambiguous_character':'character_not_found');
   const item=matches[0],row=item.row,id=String(row[7]).trim();
   if(!id) throw new Error('character_id_missing');
-  const points=row[5],level=row[6];
-  return {id,name:String(row[0]).trim(),kind:key_(row[1]),index:item.index,
+  const live=typeof sysEnabled_==='function'&&sysEnabled_()?sysProgress_(String(row[0]).trim(),id):null;
+  const points=live?live.points:row[5],level=live?live.level:row[6];
+  return {id,name:String(row[0]).trim(),kind:key_(live?live.kind:row[1]),index:item.index,
     points:typeof points==='number'&&Number.isSafeInteger(points)&&points>=0?points:null,
     level:typeof level==='number'&&Number.isSafeInteger(level)&&level>=0&&level<=9?level:null,
-    formula:Boolean(registry.sheet.getRange(item.index+1,6).getFormula())};
+    formula:live?false:Boolean(registry.sheet.getRange(item.index+1,6).getFormula())};
 }
 function receipt_(row) {
   return {id:String(row[7]),character_id:String(row[8]),character:String(row[0]),perk_id:String(row[9]),
