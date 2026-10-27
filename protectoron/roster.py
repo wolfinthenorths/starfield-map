@@ -15,7 +15,7 @@ def parse_roster(data):
     if not rows:
         raise ValueError("Character registry is empty")
     names = {normalize(name): index for index, name in enumerate(rows[0])}
-    required = ["имя персонажа", "класс", "степень"]
+    required = ['имя персонажа', "класс", "степень"]
     if any(name not in names for name in required):
         raise ValueError("Character registry headers do not match")
     result = {}
@@ -23,7 +23,7 @@ def parse_roster(data):
         def get(column):
             index = names.get(column, -1)
             return cells[index].strip() if 0 <= index < len(cells) else ""
-        name = get("имя персонажа")
+        name = get('имя персонажа')
         if not name:
             continue
         key = normalize(name)
@@ -34,7 +34,7 @@ def parse_roster(data):
         kind = get("класс")
         result[key] = {"key": key, "name": name, "class": kind, "degree": degree,
                        "eligible": normalize(kind) == "гуль" and degree is not None,
-                       "username": get("telegram-аккаунт").lstrip("@"),
+                       "username": get('telegram-аккаунт').lstrip("@"),
                        "telegram_id": get("telegram id")}
     if not result:
         raise ValueError("No characters in registry")
@@ -62,7 +62,7 @@ class Roster:
                 self.entries, self.updated_at = entries, time.time()
             except Exception:
                 # No stale or guessed eligibility after losing registry access.
-                raise ValueError("Не удалось сверить реестр персонажей. Повторите обращение позже.") from None
+                raise ValueError('Не удалось сверить реестр системы Выживших. Повторите обращение позже.') from None
             return self.entries
 
     def get(self, name):
@@ -75,3 +75,4 @@ def account_matches(entry, user):
     if entry["username"]:
         return entry["username"].casefold() == str(user.get("username", "")).lstrip("@").casefold()
     return False
+

@@ -18,6 +18,7 @@ vm.runInContext(source.slice(source.indexOf('async function api('),source.indexO
   assert.equal(JSON.parse(calls[2].options.body).requestId,'original-request');
   assert.equal(calls.length,3);
   latency=100000;
-  await assert.rejects(context.api('perks'),/Ваш персонаж выбран/);
+  await assert.rejects(context.api('perks'),/Ваши регистрационные данные сохранены/);
   console.log('API: slow Sheets reads and acquisitions can finish; timeouts stay bounded; no duplicate calls');
 })().catch(error=>{console.error(error);process.exitCode=1;});
+

@@ -8,7 +8,7 @@
   <link rel="icon" href="/assets/mysterium.webp" type="image/webp">
   <link rel="stylesheet" href="/style.css?v=perks-1">
   <script src="/telegram-web-app.js" defer></script>
-  <script src="/app.js?v=perks-loading-2" defer></script>
+  <script src="/app.js?v=approved-copy-20261027" defer></script>
 </head>
 <body>
   <main class="terminal">
@@ -16,7 +16,7 @@
       <div><span class="eyebrow">STARFIELD / СЛУЖБА КОНТРОЛЯ</span><div class="brand">ПРОТЕКТРОН<span class="serial">PR–01</span></div></div>
       <button id="sound" class="sound-button" type="button" aria-pressed="false" aria-label="Включить звук">ЗВУК: ВЫКЛ.</button>
     </header>
-    <div class="connection"><span class="led"></span><span id="connection-label">Подключение к контроллеру…</span><span class="connection-code">ЛИЧНОЕ ОБСЛУЖИВАНИЕ</span></div>
+    <div class="connection"><span class="led"></span><span id="connection-label">Подключение к контроллеру…</span><span class="connection-code">Личное обслуживание</span></div>
     <nav class="tabs" aria-label="Разделы робота">
       <button data-tab="dispense" class="active" aria-current="page">Выдача</button>
       <button data-tab="perks">Перки</button>
@@ -26,50 +26,50 @@
     </nav>
 
     <section id="dispense" class="view active" aria-labelledby="dispense-title">
-      <div class="section-heading"><div><p class="eyebrow">МЕДИЦИНСКОЕ ОБСЛУЖИВАНИЕ</p><h1 id="dispense-title">Мистериум</h1></div><span class="small-tag">УРОВЕНЬ 1</span></div>
+      <div class="section-heading"><div><p class="eyebrow">Медицинское обслуживание</p><h1 id="dispense-title">«Мистериум»</h1></div><span class="small-tag">УРОВЕНЬ 1</span></div>
       <div class="scene-shell">
-        <div class="scene-label"><span>ОТСЕК ВЫДАЧИ</span><span id="scene-state">ЗАМОК ЗАКРЫТ</span></div>
-        <canvas id="scene" width="640" height="320" role="img" aria-label="Робот-контроллер рядом с закрытым контейнером мистериума"></canvas>
+        <div class="scene-label"><span>Отсек выдачи</span><span id="scene-state">Замок закрыт</span></div>
+        <canvas id="scene" width="640" height="320" role="img" aria-label="Робот-контроллер рядом с закрытым контейнером «Мистериума»"></canvas>
         <div class="scene-foot"><span id="scene-hint">Ожидание обращения</span><span class="scene-coordinate">M–84 / MED</span></div>
       </div>
-      <div class="speech"><img src="/assets/robotSprite-cut.png" alt="" class="robot-avatar"><div><span class="eyebrow">КОНТРОЛЛЕР</span><p id="robot-speech" aria-live="polite">«Назовите Вашего персонажа, чтобы я мог сверить сведения о нём с реестром и определить доступное обслуживание».</p></div></div>
+      <div class="speech"><img src="/assets/robotSprite-cut.png" alt="" class="robot-avatar"><div><span class="eyebrow">КОНТРОЛЛЕР</span><p id="robot-speech" aria-live="polite">«Назовите Ваше имя, чтобы я мог сверить сведения о Вас с реестром системы и определить доступное обслуживание».</p></div></div>
       <div id="registration-panel" class="profile-card">
-        <span class="eyebrow">ДАННЫЕ ПЕРСОНАЖА</span><h2>Имя Вашего персонажа</h2>
-        <form id="registration-form"><label for="registration-name">Как персонаж записан в реестре?</label><div class="input-row"><input id="registration-name" maxlength="80" placeholder="Имя персонажа" required><button class="secondary-button" type="submit">Проверить</button></div></form>
-        <p id="registration-status" class="fine-print" aria-live="polite">Класс и количество препарата определяются по реестру.</p>
+        <span class="eyebrow">Данные Выжившего</span><h2>Ваше имя</h2>
+        <form id="registration-form"><label for="registration-name">Как Выживший записан в реестре системы?</label><div class="input-row"><input id="registration-name" maxlength="80" placeholder="Имя Выжившего" required><button class="secondary-button" type="submit">Проверить</button></div></form>
+        <p id="registration-status" class="fine-print" aria-live="polite">Класс и количество препарата определяются по реестру системы.</p>
       </div>
       <div id="degree-panel" class="degree-panel" hidden>
-        <div class="own-card"><span class="eyebrow">ДАННЫЕ РЕЕСТРА</span><strong id="own-name"></strong><p id="own-details"></p><p id="own-development">Уровень и доступные очки навыков уточняются в реестре.</p></div>
-        <button id="dispense-button" class="primary-button" disabled type="button"><span>Получить мистериум</span><span aria-hidden="true">→</span></button>
-        <p id="own-dose-note" class="fine-print">Количество препарата определяется классом и степенью из реестра.</p>
+        <div class="own-card"><span class="eyebrow">Данные реестра системы</span><strong id="own-name"></strong><p id="own-details"></p><p id="own-development">Уровень и доступные очки навыков уточняются в реестре системы.</p></div>
+        <button id="dispense-button" class="primary-button" disabled type="button"><span>Получить «Мистериум»</span><span aria-hidden="true">→</span></button>
+        <p id="own-dose-note" class="fine-print">Количество препарата определяется классом и степенью из реестра системы.</p>
         <button id="companion-open" class="secondary-button companion-open" type="button">Согласование выдачи дозы для иного лица</button>
       </div>
-      <div id="companion-panel" class="profile-card" hidden><span class="eyebrow">ВЫДАЧА ПО РАПОРТУ</span><h2>Для кого нужен препарат?</h2><div id="companion-recipients" class="access-services"></div><form id="companion-form"><label for="companion-report">По какой причине получатель не может получить препарат самостоятельно?</label><textarea id="companion-report" minlength="5" maxlength="1200" rows="4" placeholder="Коротко опишите ситуацию" required></textarea><button id="companion-send" class="primary-button" type="submit" disabled><span>Отправить рапорт</span><span aria-hidden="true">→</span></button></form><p id="companion-status" class="fine-print" aria-live="polite"></p><button id="companion-back" class="text-button" type="button">Вернуться к личной выдаче</button></div>
+      <div id="companion-panel" class="profile-card" hidden><span class="eyebrow">Выдача по рапорту</span><h2>Для кого нужен препарат?</h2><div id="companion-recipients" class="access-services"></div><form id="companion-form"><label for="companion-report">По какой причине получатель не может получить препарат самостоятельно?</label><textarea id="companion-report" minlength="5" maxlength="1200" rows="4" placeholder="Коротко опишите ситуацию" required></textarea><button id="companion-send" class="primary-button" type="submit" disabled><span>Отправить рапорт</span><span aria-hidden="true">→</span></button></form><p id="companion-status" class="fine-print" aria-live="polite"></p><button id="companion-back" class="text-button" type="button">Вернуться к личной выдаче</button></div>
       <div id="requests-list" class="requests-list"></div>
       <div id="receipt-panel" class="receipt-panel" hidden>
-        <img src="/assets/mysterium.webp" alt="Флакон мистериума">
-        <div><span class="eyebrow">ВЫДАЧА ЗАФИКСИРОВАНА</span><h2 id="receipt-dose">Препарат подготовлен</h2><p>Выдача сохранена в журнале.</p></div>
+        <img src="/assets/mysterium.webp" alt="Флакон «Мистериума»">
+        <div><span class="eyebrow">Выдача зафиксирована</span><h2 id="receipt-dose">Препарат подготовлен</h2><p>Выдача сохранена в журнале.</p></div>
         <button id="again-button" class="secondary-button" type="button">Новое обращение</button>
       </div>
-      <p class="notice">Получение препарата и его приём — отдельные действия. Действия Вашего персонажа Вы отыгрываете самостоятельно.</p>
+      <p class="notice">Получение препарата и его приём — отдельные действия. Свои действия Вы описываете самостоятельно.</p>
     </section>
 
     <section id="perks" class="view" aria-labelledby="perks-title">
-      <div class="section-heading"><div><p class="eyebrow">МОДУЛЬ РАЗВИТИЯ</p><h1 id="perks-title">Перки персонажа</h1></div></div>
+      <div class="section-heading"><div><p class="eyebrow">Модуль развития</p><h1 id="perks-title">Перки Выжившего</h1></div></div>
       <div class="speech"><img src="/assets/robotSprite-cut.png" alt="" class="robot-avatar"><div><span class="eyebrow">КОНТРОЛЛЕР</span><p>«Выберите необходимую особую возможность. Перед оформлением я проверю Ваш баланс и уже полученные перки».</p></div></div>
-      <div class="own-card perk-account"><span class="eyebrow">ДАННЫЕ РЕЕСТРА</span><strong id="perk-character">Персонаж не указан</strong><div class="perk-stats"><div><span>Уровень персонажа</span><strong id="perk-level">—</strong></div><div><span>Доступно очков навыков</span><strong id="perk-points">—</strong></div></div><p id="perk-free-count">Бесплатные выборы за уровень: —</p><button id="perk-refresh" type="button" class="text-button">Обновить сведения</button><p id="perk-status" role="status" aria-live="polite" class="fine-print"></p></div>
+      <div class="own-card perk-account"><span class="eyebrow">Данные реестра системы</span><strong id="perk-character">Выживший не указан</strong><div class="perk-stats"><div><span>Уровень Выжившего</span><strong id="perk-level">—</strong></div><div><span>Доступно очков навыков</span><strong id="perk-points">—</strong></div></div><p id="perk-free-count">Бесплатные выборы за уровень: —</p><button id="perk-refresh" type="button" class="text-button">Обновить сведения</button><p id="perk-status" role="status" aria-live="polite" class="fine-print"></p></div>
       <div id="perk-pending" class="inline-result" hidden><p>Проверяется результат предыдущего обращения. Повторная проверка использует тот же номер и не создаёт повторное списание.</p><button id="perk-retry" type="button" class="secondary-button">Проверить результат</button></div>
       <div id="perk-result" class="inline-result" role="status" aria-live="polite" hidden></div>
       <div id="perk-class" class="perk-class"></div>
       <div class="perk-filters" role="group" aria-label="Разделы каталога"><button type="button" data-perk-filter="small" aria-pressed="true">Малые</button><button type="button" data-perk-filter="large" aria-pressed="false">Крупные</button><button type="button" data-perk-filter="owned" aria-pressed="false">Мои перки</button></div>
       <p id="perk-empty" class="fine-print" hidden>Пока Вы не выбрали дополнительные перки. Классовая возможность показана отдельно выше.</p>
       <div id="perk-catalog" class="perk-catalog"></div>
-      <p class="notice">Развитие оформляется после сцены или этапа, вне боя. За каждое повышение уровня доступен один бесплатный малый перк; дополнительные малые и крупные перки приобретаются за очки навыков. Активные перки применяются один раз за главу, а в новой главе доступны снова — повторная покупка не нужна.</p>
+      <p class="notice">Развитие оформляется после ситуации или этапа, вне боя. За каждое повышение уровня доступен один бесплатный малый перк; дополнительные малые и крупные перки приобретаются за очки навыков. Активные перки применяются один раз за главу, а в новой главе доступны снова — повторная покупка не нужна.</p>
     </section>
 
     <section id="access" class="view" aria-labelledby="access-title">
-      <div class="section-heading"><div><p class="eyebrow">СИСТЕМЫ УБЕЖИЩА</p><h1 id="access-title">Повышение доступа</h1></div></div>
-      <div class="access-card"><img src="/assets/terminal-cut.png" alt="Терминал допуска"><div><span class="eyebrow">ПРОФЕССИОНАЛЬНАЯ АТТЕСТАЦИЯ</span><strong id="access-code">—</strong><p>Допуск определяется отдельно для каждой службы.</p></div></div>
+      <div class="section-heading"><div><p class="eyebrow">Системы убежища</p><h1 id="access-title">Повышение доступа</h1></div></div>
+      <div class="access-card"><img src="/assets/terminal-cut.png" alt="Терминал допуска"><div><span class="eyebrow">Профессиональная аттестация</span><strong id="access-code">—</strong><p>Допуск определяется отдельно для каждой службы.</p></div></div>
       <div class="speech"><img src="/assets/robotSprite-cut.png" alt="" class="robot-avatar"><div><span class="eyebrow">КОНТРОЛЛЕР</span><p>«Уточните, какой именно доступ Вам требуется повысить».</p></div></div>
       <div id="access-services" class="access-services" role="group" aria-label="Выберите службу"></div>
       <div id="access-level-panel" hidden><div class="field-heading"><label>Нужный уровень полномочий</label><button id="change-service" class="text-button" type="button">Другая служба</button></div><p id="service-description" class="section-intro"></p><div id="access-levels" role="group" aria-label="Выберите уровень допуска"></div></div>
@@ -78,24 +78,24 @@
     </section>
 
     <section id="faq" class="view" aria-labelledby="faq-title">
-      <div class="section-heading"><div><p class="eyebrow">СПРАВОЧНЫЙ МОДУЛЬ</p><h1 id="faq-title">Чем могу помочь?</h1></div></div>
+      <div class="section-heading"><div><p class="eyebrow">Справочный модуль</p><h1 id="faq-title">Чем могу помочь?</h1></div></div>
       <p class="section-intro">Ответы контроллера на частые вопросы.</p>
       <div id="faq-list" class="faq-list"></div>
-      <div class="links-panel"><span class="eyebrow">МАТЕРИАЛЫ ПРОЕКТА</span><a href="https://t.me/dawnofthed3ad" target="_blank" rel="noopener noreferrer">Материалы проекта <span aria-hidden="true">↗</span></a><a href="https://starfield-archive.netlify.app/" target="_blank" rel="noopener noreferrer">Архив Starfield <span aria-hidden="true">↗</span></a></div>
+      <div class="links-panel"><span class="eyebrow">Материалы проекта</span><a href="https://t.me/dawnofthed3ad" target="_blank" rel="noopener noreferrer">Материалы проекта <span aria-hidden="true">↗</span></a><a href="https://starfield-archive.netlify.app/" target="_blank" rel="noopener noreferrer">Архив Starfield <span aria-hidden="true">↗</span></a></div>
     </section>
 
     <section id="history" class="view" aria-labelledby="history-title">
-      <div class="section-heading"><div><p class="eyebrow">ЛИЧНЫЕ ЗАПИСИ</p><h1 id="history-title">Журнал обращений</h1></div></div>
-      <form id="profile-form" class="profile-card"><label for="character">Регистрация другого персонажа</label><div class="input-row"><input id="character" maxlength="80" placeholder="Имя из реестра" autocomplete="off"><button class="secondary-button" type="submit">Проверить</button></div><p id="profile-status" class="fine-print" aria-live="polite">Укажите имя Вашего персонажа из реестра.</p></form>
+      <div class="section-heading"><div><p class="eyebrow">Личные записи</p><h1 id="history-title">Журнал обращений</h1></div></div>
+      <form id="profile-form" class="profile-card"><label for="character">Регистрация другого Выжившего</label><div class="input-row"><input id="character" maxlength="80" placeholder="Имя из реестра системы" autocomplete="off"><button class="secondary-button" type="submit">Проверить</button></div><p id="profile-status" class="fine-print" aria-live="polite">Укажите Ваше имя из реестра системы.</p></form>
       <div id="history-list" class="history-list"><p class="empty-state">Обращений пока нет.</p></div>
     </section>
     <div id="error" class="error" role="alert" hidden></div>
     <div id="demo-notice" class="demo-notice" hidden>Вы просматриваете робота вне Telegram. Выдача доступна в личном чате с <a href="https://t.me/ptotectoronbot">@ptotectoronbot</a>.</div>
-    <footer><span>VAULT–TEC / STARFIELD</span><span>КОНТРОЛЛЕР НА СВЯЗИ</span></footer>
+    <footer><span>VAULT–TEC / STARFIELD</span><span>Контроллер на связи</span></footer>
   </main>
   <dialog id="waiting-dialog" class="waiting-dialog" aria-labelledby="waiting-title" aria-describedby="waiting-message waiting-note">
     <img src="/assets/robotSprite-cut.png" alt="" class="waiting-robot">
-    <span class="eyebrow">КОНТРОЛЛЕР ОБРАБАТЫВАЕТ ОБРАЩЕНИЕ</span>
+    <span class="eyebrow">Контроллер обрабатывает обращение</span>
     <h2 id="waiting-title">Ожидайте</h2>
     <p id="waiting-message" role="status">Ожидание согласования на выдачу «Мистериума»</p>
     <p id="waiting-recipient" class="fine-print"></p>
@@ -104,7 +104,7 @@
   </dialog>
   <dialog id="perk-dialog" class="waiting-dialog perk-dialog" aria-labelledby="perk-dialog-title" aria-describedby="perk-dialog-summary">
     <img id="perk-dialog-image" class="perk-confirm-image" alt="">
-    <span class="eyebrow">ПОДТВЕРЖДЕНИЕ ПОЛУЧЕНИЯ</span><h2 id="perk-dialog-title"></h2>
+    <span class="eyebrow">Подтверждение получения</span><h2 id="perk-dialog-title"></h2>
     <p id="perk-dialog-summary"></p><p id="perk-dialog-character" class="fine-print"></p>
     <label id="perk-scene-label" class="perk-check"><input id="perk-scene-confirm" type="checkbox"><span>Сцена или этап завершены; развитие оформляется вне боя.</span></label>
     <button id="perk-confirm" class="primary-button" type="button" disabled>Подтвердить</button>
@@ -112,3 +112,4 @@
   </dialog>
 </body>
 </html>
+

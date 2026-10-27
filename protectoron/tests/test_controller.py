@@ -194,7 +194,7 @@ class ControllerTests(unittest.TestCase):
             event = server.state(con, 101)["events"][0]
             self.assertEqual(event["payload"]["target"], "MED-2")
             message = json.loads(con.execute("SELECT payload FROM outbox ORDER BY id DESC LIMIT 1").fetchone()[0])
-            self.assertIn("Ссылка на испытание", message["text"])
+            self.assertIn("Повышение квалификации проводится через тест", message["text"])
 
     def test_future_test_url_is_configurable_per_clearance(self):
         with patch.object(server, "TEST_URLS", {"MED-2": "https://example.com/medical-test", "TEC-2": "javascript:alert(1)"}):
@@ -226,7 +226,7 @@ class ControllerTests(unittest.TestCase):
         server.handle_update({"update_id": 90, "message": {"chat": {"id": 101, "type": "private"}, "from": {"id": 101}, "text": "/menu"}})
         with server.db() as con:
             welcome = json.loads(con.execute("SELECT payload FROM outbox WHERE user_id=101").fetchone()[0])["text"]
-            self.assertIn("Добрый день, Цифер! Данные реестра проверены, укажите цель обращения?", welcome)
+            self.assertIn("Добрый день, Цифер! Данные реестра системы проверены, укажите цель обращения?", welcome)
             report = server.companion_request(con, 202, "Цифер", "Товарищ не может прийти самостоятельно", "robot-text", "chat")
             server.decide_request(con, {"id": 901, "username": "VaultTecGm"}, report["id"], "approve")
             for row in con.execute("SELECT payload FROM outbox WHERE user_id>0"):
@@ -335,3 +335,4 @@ class RegistryTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+

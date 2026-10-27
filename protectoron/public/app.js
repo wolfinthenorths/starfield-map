@@ -6,14 +6,7 @@ const initData = tg?.initData || '';
 const real = Boolean(initData);
 const $ = id => document.getElementById(id);
 const roman = {1:'I',2:'II',3:'III'};
-const fallbackFaq = [
-  {id:'purpose',question:'Для чего нужен мистериум?',answer:'Мистериум поддерживает контроль при гулификации, а необходимое количество препарата определяется её степенью: I — 1 единица, II — 2 единицы, III — 3 единицы.'},
-  {id:'interval',question:'Как часто нужно принимать препарат?',answer:'Препарат необходимо принимать в полном назначенном количестве каждые 10 Ваших игровых ходов; поскольку получение не считается приёмом, сам приём Вы отыгрываете отдельно.'},
-  {id:'turn',question:'Что считается ходом?',answer:'Собственный игровой пост с действием, в том числе передвижением или отыгрышем реквеста. Обычные диалоги, спасброски, технические сообщения и дополнительные ответы не засчитываются.'},
-  {id:'missed',question:'Что будет при пропуске приёма?',answer:'После первых 10 ходов без нового приёма препарата: следующие ходы 1–3 — помеха, на 4-м условия проверок могут быть изменены, на 5-м наступает полная потеря контроля над персонажем. Приём полного назначенного количества препарата восстанавливает контроль и сбрасывает счётчик.'},
-  {id:'access',question:'Как повысить доступ?',answer:'Выберите службу и нужный уровень полномочий, чтобы перейти к тесту на повышение квалификации; ссылка на испытание будет добавлена позже. Уровни разных служб учитываются отдельно, а Ω не является пятым уровнем и не выдаётся штатным сотрудникам.'},
-  {id:'materials',question:'Где найти материалы проекта?',answer:'Материалы проекта доступны в Telegram по ссылке https://t.me/dawnofthed3ad, а перейти в архив Starfield Вы можете через справочный модуль.'}
-];
+const fallbackFaq = [{"id": "purpose", "question": "Для чего нужен «Мистериум»?", "answer": "«Мистериум» поддерживает контроль организма при гулификации, необходимое количество препарата определяется её степенью: I — 1 единица, II — 2 единицы, III — 3 единицы."}, {"id": "interval", "question": "Как часто нужно принимать препарат?", "answer": "Препарат необходимо принимать в полном назначенном количестве каждые 10 Ваших игровых ходов."}, {"id": "turn", "question": "Что считается ходом?", "answer": "Засчитывается собственный игровой пост с действием, в том числе передвижением или отыгрышем реквеста. Обычные диалоги, спасброски, технические сообщения и дополнительные ответы не засчитываются."}, {"id": "missed", "question": "Что будет при пропуске приёма?", "answer": "После первых 10 ходов без нового приёма препарата Вы начинаете терять контроль над собой.\nНа следующих 3-х ходах действует помеха, на 4-м условия проверок могут быть изменены, на 5-м наступает полная потеря самоконтроля. Приём полного назначенного количества препарата восстанавливает контроль и сбрасывает счётчик."}, {"id": "access", "question": "Как повысить доступ?", "answer": "Выберите службу и нужный уровень её полномочий, чтобы перейти к тесту на повышение квалификации. Уровни разных служб учитываются отдельно: 1 — вспомогательный, 2 — рабочий, 3 — расширенный, 4 — критический. При этом уровень развития и номер этажа не обозначают служебный допуск, а Ω не является пятым уровнем и не выдаётся штатным сотрудникам."}, {"id": "materials", "question": "Где найти материалы проекта?", "answer": "Материалы проекта доступны по ссылке https://t.me/dawnofthed3ad, в архив Starfield Вы можете через справочный модуль."}, {"id": "perks_507", "question": "Как получить перк?", "answer": "Классовый перк выдается бесплатно и зависит от класса Выжившего. За каждый полученный уровень доступен один бесплатный выбор малого перка, дополнительные малые и крупные перки можно купить за очки навыков."}, {"id": "perks_508", "question": "Чем бесплатный выбор за уровень отличается от покупки?", "answer": "При выборе за уровень очки навыков не расходуются: используется один бесплатный выбор. При покупке списывается указанная стоимость перка."}, {"id": "perks_509", "question": "Можно ли получить крупный перк бесплатно за уровень?", "answer": "Нет. За уровень можно выбрать только малый перк, крупные перки приобретаются за очки навыков."}, {"id": "perks_510", "question": "Сколько стоят перки?", "answer": "Стоимость указана в карточке каждого перка."}, {"id": "perks_511", "question": "Где посмотреть свой уровень и оставшиеся очки?", "answer": "Откройте раздел «Перки»: в карточке Выжившего отображаются уровень, доступные очки навыков и оставшиеся бесплатные выборы за уровень. После покупки остаток очков обновляется в роботе и реестре системы."}, {"id": "perks_513", "question": "Как закрепить классовый бонус жителя?", "answer": "В разделе «Перки» откройте «Дважды учёный», выберите два разных навыка из списка и нажмите «Закрепить два навыка». Доступны Анализ, История, Расследование, Инженерия, Медицина и Убеждение. Каждый выбранный навык получает постоянный бонус +1 к проверкам. Очки навыков не расходуются."}, {"id": "perks_514", "question": "Где сохраняется выбор навыков жителя?", "answer": "После подтверждения выбор отображается в роботе и записывается в реестр системы."}, {"id": "perks_516", "question": "Как часто можно пользоваться перками?", "answer": "Пассивные перки действуют постоянно при выполнении условий их описания. Активный перк можно использовать один раз за главу. О применении перка необходимо сообщить Смотрителю."}, {"id": "perks_517", "question": "Где посмотреть полученные перки?", "answer": "Полученные перки отображаются в разделе «Перки» робота. В реестре системы отдельно показаны купленные перки и перки за уровень; подробности получения записываются на листе «Перки»."}, {"id": "perks_518", "question": "Что делать, если уровень, очки или перки отображаются неверно?", "answer": "Нажмите «Обновить сведения». Если данные не изменились или уровень ещё не указан, обратитесь к Смотрителю для проверки реестра системы."}];
 let profile = {name:'Посетитель',character:'',degree:null,access_level:1};
 let events = [], degree = null, busy = false, opened = false, frame = 0;
 let sound = false;
@@ -59,7 +52,7 @@ async function api(path, data={}){
   // acquisition also verifies the ledger before committing the same request ID.
   const timeout=path==='perks'?90000:path==='perk-acquire'?150000:20000;
   try {response=await fetch(`/api/${path}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({initData,...data}),signal:AbortSignal.timeout(timeout)});}
-  catch {throw new Error(path==='perks'?'Не удалось дождаться сведений из реестра. Ваш персонаж выбран; нажмите «Обновить сведения», чтобы повторить проверку.':'Связь с контроллером прервалась; пожалуйста, проверьте соединение и повторите обращение.');}
+  catch {throw new Error(path==='perks'?'Не удалось дождаться сведений из реестра системы. Ваши регистрационные данные сохранены; нажмите «Обновить сведения», чтобы повторить проверку.':'Связь с контроллером прервалась; пожалуйста, проверьте соединение и повторите обращение.');}
   const result=await response.json();
   if(!response.ok){const error=new Error(result.error||'Контроллер временно недоступен.');error.definitive=response.status>=400&&response.status<500;throw error;}
   return result;
@@ -84,10 +77,10 @@ function sync(data){
     if(!opened)degree=ownCharacter.degree;
     $('own-name').textContent=ownCharacter.name;
     $('own-details').textContent=ownCharacter.class+(ownCharacter.degree?` · ${roman[ownCharacter.degree]} степень гулификации`:'');
-    $('own-dose-note').textContent=ownCharacter.eligible?`Назначенное количество препарата: ${ownCharacter.degree} ${ownCharacter.degree===1?'единица':'единицы'}.`:'Личная выдача мистериума для Вашего класса недоступна. Для получения препарата с целью передачи иному лицу — напишите рапорт.';
+    $('own-dose-note').textContent=ownCharacter.eligible?`Назначенное количество препарата: ${ownCharacter.degree} ${ownCharacter.degree===1?'единица':'единицы'}.`:'Личная выдача «Мистериума» для Вашего класса недоступна. Для получения препарата с целью передачи иному лицу — напишите рапорт.';
     $('dispense-button').disabled=!real||!ownCharacter.eligible;
     $('companion-open').disabled=!real||!gmConnected;
-    if(!opened)$('robot-speech').textContent=`«Добрый день, ${ownCharacter.name}! Данные реестра проверены, укажите цель обращения?»`;
+    if(!opened)$('robot-speech').textContent=`«Добрый день, ${ownCharacter.name}! Данные реестра системы проверены, укажите цель обращения?»`;
   }
   renderRequests();
   if(data.accesses&&!accessCatalog){accessCatalog=data.accesses;renderAccesses();}
@@ -102,7 +95,7 @@ function renderHistory(){
     const el=document.createElement('article');el.className='history-entry';
     const img=document.createElement('img');img.src=event.kind==='perk'?(perkCatalog?.perks.find(p=>p.id===event.payload.perk_id)?.image||'/assets/terminal-cut.png'):event.kind==='dispense'?'/assets/mysterium.webp':'/assets/terminal-cut.png';img.alt='';
     const body=document.createElement('div'),title=document.createElement('strong'),desc=document.createElement('p'),date=document.createElement('time');
-    title.textContent=event.kind==='dispense'?'Выдача мистериума':'Запрос на повышение доступа';
+    title.textContent=event.kind==='dispense'?'Выдача «Мистериума»':'Запрос на повышение доступа';
     desc.textContent=event.kind==='dispense'?`${roman[event.payload.degree]} степень · ${event.payload.units} ${event.payload.units===1?'единица':'единицы'} препарата`:`${event.payload.target} · ожидает тестирования`;
     if(event.kind==='dispense'&&event.payload.for_companion)desc.textContent+=` · получатель: ${event.payload.recipient}`;
     if(event.kind==='perk'){title.textContent=event.payload.mode==='paid'?'Покупка перка':event.payload.mode==='free'?'Перк за уровень':'Классовый перк';desc.textContent=`${event.payload.character} · ${event.payload.perk_name} · ${event.payload.mode==='paid'?`списано ${event.payload.cost} ${pointsWord(event.payload.cost)}`:'без списания очков'}`;}
@@ -157,16 +150,16 @@ function drawScene(){
   }
 }
 async function animateOpen(){
-  play('box-open');$('scene-state').textContent='ОТСЕК ОТКРЫВАЕТСЯ';
-  canvas.setAttribute('aria-label','Робот-контроллер открывает контейнер мистериума');
+  play('box-open');$('scene-state').textContent='Отсек открывается';
+  canvas.setAttribute('aria-label','Робот-контроллер открывает контейнер «Мистериума»');
   if(reducedMotion){frame=9;opened=true;drawScene();}
   else await new Promise(resolve=>{
     const start=performance.now();
     function tick(now){const p=Math.min(1,(now-start)/850);frame=Math.min(9,Math.floor(p*10));drawScene();if(p<1)requestAnimationFrame(tick);else{opened=true;drawScene();resolve();}}
     requestAnimationFrame(tick);
   });
-  $('scene-state').textContent='ПРЕПАРАТ ДОСТУПЕН';
-  canvas.setAttribute('aria-label',`Робот-контроллер рядом с открытым контейнером: ${degree||1} единиц мистериума`);
+  $('scene-state').textContent='Препарат доступен';
+  canvas.setAttribute('aria-label',`Робот-контроллер рядом с открытым контейнером: ${degree||1} единиц «Мистериума»`);
 }
 function showReceipt(receipt){
   degree=receipt.degree;$('degree-panel').hidden=true;$('receipt-panel').hidden=false;
@@ -194,10 +187,10 @@ $('dispense-button').addEventListener('click',async()=>{
     const data=await api('dispense',{requestId:issuanceKey});
     sync(data);await animateOpen();showReceipt(data.receipt);play('confirm');haptic('medium');
   }catch(e){showError(e.message);$('dispense-button').disabled=!real||!ownCharacter?.eligible;}
-  finally{busy=false;$('dispense-button').firstElementChild.textContent='Получить мистериум';}
+  finally{busy=false;$('dispense-button').firstElementChild.textContent='Получить «Мистериум»';}
 });
 $('again-button').addEventListener('click',()=>{
-  if(busy)return;play('box-close');opened=false;frame=0;degree=ownCharacter?.degree||null;issuanceKey=null;drawScene();$('receipt-panel').hidden=true;$('degree-panel').hidden=!ownCharacter;$('scene-state').textContent='ЗАМОК ЗАКРЫТ';$('scene-hint').textContent='Ожидание обращения';$('robot-speech').textContent=ownCharacter?`«Добрый день, ${ownCharacter.name}! Данные реестра проверены, укажите цель обращения?»`:'«Назовите Вашего персонажа для проверки реестра».';$('dispense-button').disabled=!real||!ownCharacter?.eligible;
+  if(busy)return;play('box-close');opened=false;frame=0;degree=ownCharacter?.degree||null;issuanceKey=null;drawScene();$('receipt-panel').hidden=true;$('degree-panel').hidden=!ownCharacter;$('scene-state').textContent='Замок закрыт';$('scene-hint').textContent='Ожидание обращения';$('robot-speech').textContent=ownCharacter?`«Добрый день, ${ownCharacter.name}! Данные реестра системы проверены, укажите цель обращения?»`:'«Назовите Ваше имя для проверки реестра системы».';$('dispense-button').disabled=!real||!ownCharacter?.eligible;
 });
 async function requestAccess(target){
   if(busy||!real)return;busy=true;clearError();document.querySelectorAll('[data-access-level]').forEach(b=>b.disabled=true);
@@ -217,13 +210,13 @@ function selectService(service){
   for(const level of accessCatalog.levels.filter(item=>item.level>1)){const button=document.createElement('button');button.type='button';button.className='choice-button';button.dataset.accessLevel=String(level.level);button.disabled=!real||!ownCharacter;const title=document.createElement('span'),sub=document.createElement('small'),arrow=document.createElement('span');title.textContent=`${service.code}-${level.level}`;sub.textContent=level.name;arrow.textContent='→';arrow.setAttribute('aria-hidden','true');button.append(title,sub,arrow);button.addEventListener('click',()=>requestAccess(`${service.code}-${level.level}`));list.append(button);}play('click');haptic();
 }
 $('change-service').addEventListener('click',()=>{if(busy)return;selectedService=null;accessKey=null;$('access-services').hidden=false;$('access-level-panel').hidden=true;$('access-result').hidden=true;$('access-code').textContent='—';play('click');});
-async function registerCharacter(name,statusId){const data=await api('profile',{character:name});sync(data);$(statusId).textContent=data.registration_status==='verified'?'Данные реестра проверены, и Вы можете выбрать необходимое обслуживание.':'Укажите имя персонажа из реестра.';play('confirm');}
+async function registerCharacter(name,statusId){const data=await api('profile',{character:name});sync(data);$(statusId).textContent=data.registration_status==='verified'?'Данные реестра системы проверены, и Вы можете выбрать необходимое обслуживание.':'Укажите имя из реестра системы.';play('confirm');}
 $('profile-form').addEventListener('submit',async e=>{e.preventDefault();const button=e.currentTarget.querySelector('button');button.disabled=true;try{await registerCharacter($('character').value,'profile-status');}catch(error){showError(error.message);}finally{button.disabled=!real;}});
 $('registration-form').addEventListener('submit',async e=>{e.preventDefault();const button=e.currentTarget.querySelector('button');button.disabled=true;try{await registerCharacter($('registration-name').value,'registration-status');}catch(error){showError(error.message);}finally{button.disabled=!real;}});
 function renderRecipients(){
   const list=$('companion-recipients');list.replaceChildren();
   for(const item of characters.filter(item=>item.eligible&&item.name!==ownCharacter?.name)){const button=document.createElement('button');button.className='service-button';button.type='button';const title=document.createElement('strong'),label=document.createElement('span');title.textContent=item.name;label.textContent=`${roman[item.degree]} степень · ${item.degree} ед.`;button.append(title,label);button.classList.toggle('selected',selectedRecipient===item.name);button.addEventListener('click',()=>{selectedRecipient=item.name;companionKey=null;renderRecipients();$('companion-send').disabled=!real;play('click');});list.append(button);}
-  if(!list.children.length){const p=document.createElement('p');p.className='fine-print';p.textContent='Других гулей с указанной степенью в реестре нет.';list.append(p);}
+  if(!list.children.length){const p=document.createElement('p');p.className='fine-print';p.textContent='Других гулей с указанной степенью в реестре системы нет.';list.append(p);}
 }
 $('companion-open').addEventListener('click',()=>{if(busy||!ownCharacter)return;$('companion-panel').hidden=false;$('degree-panel').hidden=true;selectedRecipient=null;companionKey=null;$('companion-report').value='';$('companion-status').textContent='';$('companion-send').disabled=true;renderRecipients();});
 $('companion-back').addEventListener('click',()=>{if(busy)return;$('companion-panel').hidden=true;$('degree-panel').hidden=!ownCharacter;});
@@ -246,7 +239,7 @@ function updateWaiting(){
     waitingRequestId=null;
     return;
   }
-  $('robot-speech').textContent='«Ваш рапорт принят на рассмотрение; пожалуйста, ожидайте завершения согласования на выдачу «Мистериума»».';
+  $('robot-speech').textContent='«Ваш рапорт принят на рассмотрение; пожалуйста, ожидайте завершения согласования на выдачу «Мистериума».';
 }
 function renderRequests(){
   const list=$('requests-list');list.replaceChildren();
@@ -258,15 +251,15 @@ function renderRequests(){
 }
 setInterval(async()=>{if(!real||busy||document.hidden||!requests.some(item=>item.status==='pending'||item.status==='approved'))return;try{sync(await api('state'));}catch{}},10000);
 async function loadSprites(){
-  await Promise.all(Object.entries({case:'box-cut.png',opening:'boxOpening-cut.png',robot:'robotSprite-cut.png',floor:'floor-cut.png',vial:'mysterium.webp'}).map(([key,file])=>new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>{sprites[key]=img;resolve();};img.onerror=()=>reject(new Error('Не удалось загрузить интерфейс робота; пожалуйста, откройте его заново.'));img.src=`/assets/${file}`;})));
+  await Promise.all(Object.entries({case:'box-cut.png',opening:'boxOpening-cut.png',robot:'robotSprite-cut.png',floor:'floor-cut.png',vial:'mysterium.webp'}).map(([key,file])=>new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>{sprites[key]=img;resolve();};img.onerror=()=>reject(new Error('Не удалось открыть панель обслуживания. Повторите обращение.'));img.src=`/assets/${file}`;})));
   drawScene();
 }
 async function start(){
   updateSound();renderFaq(fallbackFaq);renderHistory();
   try{tg?.ready();tg?.expand();tg?.setHeaderColor('#141914');tg?.setBackgroundColor('#141914');if(tg?.isVersionAtLeast?.('7.10'))tg.setBottomBarColor('#141914');}catch{}
   try{await loadSprites();}catch(e){showError(e.message);}
-  try{accessCatalog=await(await fetch('/accesses.json')).json();renderAccesses();}catch{showError('Не удалось загрузить список служб; пожалуйста, откройте робота заново.');}
-  try{perkCatalog=await(await fetch('/perks.json')).json();renderPerks();}catch{showError('Не удалось загрузить каталог перков; пожалуйста, откройте робота заново.');}
+  try{accessCatalog=await(await fetch('/accesses.json')).json();renderAccesses();}catch{showError('Не удалось получить сведения о службах. Повторите обращение.');}
+  try{perkCatalog=await(await fetch('/perks.json')).json();renderPerks();}catch{showError('Каталог перков временно недоступен. Повторите обращение.');}
   if(real){
     try{
       const data=await api('state');sync(data);$('connection-label').textContent=`На связи · ${profile.character||profile.name}`;
@@ -286,7 +279,7 @@ async function start(){
 let perkCatalog=null,shop=null,perkFilter='small',perkLoading=false,perkSelection=null,pendingPerk=null;
 const classSkillNames=['Анализ','История','Расследование','Инженерия','Медицина','Убеждение'];
 function syncPerkIdentity(){
-  const name=ownCharacter?.name||'Персонаж не указан';
+  const name=ownCharacter?.name||'Выживший не указан';
   if($('perk-character').textContent!==name){
     shop=null;
     $('perk-level').textContent='—';$('perk-points').textContent='—';
@@ -308,20 +301,20 @@ function syncPerks(data){
   $('perk-character').textContent=shop.character;
   $('perk-level').textContent=shop.level===null?'Не указан':String(shop.level);
   $('perk-points').textContent=shop.points===null?'Не указаны':String(shop.points);
-  $('perk-free-count').textContent=shop.free_choices===null?'Бесплатные выборы: уровень ещё не указан в реестре.':`Бесплатных выборов за уровень: ${shop.free_choices}`;
-  $('perk-status').textContent=!shop.can_acquire?'Уточните класс персонажа в реестре.':!shop.points_editable?'Для покупки необходим доступный остаток очков, а не формула общего начисления.':shop.points===null?'Доступный остаток очков ещё не указан в реестре. Бесплатный выбор определяется отдельно по уровню.':'Данные реестра проверены; после получения перка остаток обновится автоматически.';
-  if($('own-development'))$('own-development').textContent=`Уровень персонажа: ${shop.level===null?'не указан':shop.level} · доступно очков навыков: ${shop.points===null?'не указано':shop.points}`;
+  $('perk-free-count').textContent=shop.free_choices===null?'Бесплатные выборы: уровень ещё не указан в реестре системы.':`Бесплатных выборов за уровень: ${shop.free_choices}`;
+  $('perk-status').textContent=!shop.can_acquire?'Уточните класс Выжившего в реестре системы.':!shop.points_editable?'Доступный остаток очков не определён. Для уточнения обратитесь к Смотрителю.':shop.points===null?'Доступный остаток очков ещё не указан в реестре системы. Бесплатный выбор определяется отдельно по уровню.':'Данные реестра системы проверены; после получения перка остаток обновится автоматически.';
+  if($('own-development'))$('own-development').textContent=`Уровень Выжившего: ${shop.level===null?'не указан':shop.level} · доступно очков навыков: ${shop.points===null?'не указано':shop.points}`;
   $('perk-pending').hidden=!pendingPerk;
   renderPerks();renderClassPerk();
 }
 async function loadPerks(){
   syncPerkIdentity();
   if(perkLoading)return;
-  if(!real||!ownCharacter){shop=null;$('perk-status').textContent=real?'Сначала укажите имя Вашего персонажа в разделе выдачи.':'Получение доступно после открытия робота из личного чата Telegram.';renderPerks();return;}
+  if(!real||!ownCharacter){shop=null;$('perk-status').textContent=real?'Сначала укажите Ваше имя в разделе выдачи.':'Получение доступно после открытия робота из личного чата Telegram.';renderPerks();return;}
   perkLoading=true;$('perk-refresh').disabled=true;
   const character=ownCharacter.name;
-  $('perk-status').textContent='Проверяю уровень персонажа, доступные очки и полученные перки по реестру. Пожалуйста, ожидайте.';
-  const slowNotice=setTimeout(()=>{if(ownCharacter?.name===character)$('perk-status').textContent='Реестр отвечает дольше обычного. Проверка продолжается; повторно нажимать кнопку не нужно.';},8000);
+  $('perk-status').textContent='Проверяю уровень Выжившего, доступные очки и полученные перки по реестру системы. Пожалуйста, ожидайте.';
+  const slowNotice=setTimeout(()=>{if(ownCharacter?.name===character)$('perk-status').textContent='Реестр системы отвечает дольше обычного. Проверка продолжается; повторно нажимать кнопку не нужно.';},8000);
   try{const result=await api('perks');if(ownCharacter?.name===character)sync(result);}
   catch(error){if(ownCharacter?.name===character){shop=null;renderPerks();renderClassPerk();$('perk-level').textContent='—';$('perk-points').textContent='—';$('perk-free-count').textContent='Сведения о выборах за уровень пока не загружены.';$('perk-status').textContent=error.message;}}
   finally{clearTimeout(slowNotice);perkLoading=false;$('perk-refresh').disabled=false;if(ownCharacter&&ownCharacter.name!==character)loadPerks();}
@@ -362,7 +355,7 @@ function renderClassPerk(){
   target.dataset.signature=signature;target.replaceChildren();
   const card=document.createElement('article');card.className='perk-class-card';const heading=document.createElement('div');heading.className='perk-class-heading';const img=document.createElement('img');img.src=perk.image;img.alt='';const body=document.createElement('div'),label=document.createElement('span'),name=document.createElement('h2');label.className='eyebrow';label.textContent='КЛАССОВЫЙ · БЕСПЛАТНО';name.textContent=perk.name;body.append(label,name);heading.append(img,body);const desc=document.createElement('p');desc.className='perk-description';desc.textContent=perk.description;card.append(heading,desc);
   if(perk.id==='twice_learned_chemist'){
-    if(shop.class_skills.length){const text=document.createElement('p');text.textContent=`Закреплённые навыки: ${shop.class_skills.join(', ')}. Бонусы следует отметить в личной таблице персонажа.`;card.append(text);}
+    if(shop.class_skills.length){const text=document.createElement('p');text.textContent=`Закреплённые навыки: ${shop.class_skills.join(', ')}. Бонусы следует отметить в личной таблице Выжившего.`;card.append(text);}
     else{const text=document.createElement('p');text.textContent='Выберите два разных навыка, чтобы закрепить действие Вашего классового перка. Очки навыков не расходуются.';const choices=document.createElement('div');choices.className='perk-skill-options';const button=document.createElement('button');button.type='button';button.className='secondary-button';button.textContent='Закрепить два навыка';button.disabled=true;
       for(const skill of classSkillNames){const label=document.createElement('label');label.className='perk-check';const input=document.createElement('input');input.type='checkbox';input.value=skill;const text=document.createElement('span');text.textContent=skill;label.append(input,text);input.addEventListener('change',()=>{const selected=Array.from(choices.querySelectorAll('input:checked'));for(const other of choices.querySelectorAll('input'))other.disabled=selected.length>=2&&!other.checked;button.disabled=busy||Boolean(pendingPerk)||selected.length!==2;});choices.append(label);}
       button.addEventListener('click',()=>choosePerk(perk,'class',Array.from(choices.querySelectorAll('input:checked'),input=>input.value)));card.append(text,choices,button);}
@@ -373,7 +366,7 @@ function choosePerk(perk,mode,skills=[]){
   if(busy||pendingPerk||!shop?.can_acquire)return;
   if(mode!=='class'&&!canGetPerk(perk,mode))return;
   perkSelection={perkId:perk.id,mode,skills,character:shop.character,characterId:shop.character_id};
-  $('perk-dialog-image').src=perk.image;$('perk-dialog-title').textContent=perk.name;$('perk-dialog-character').textContent=`Персонаж: ${shop.character}`;
+  $('perk-dialog-image').src=perk.image;$('perk-dialog-title').textContent=perk.name;$('perk-dialog-character').textContent=`Выживший: ${shop.character}`;
   $('perk-dialog-summary').textContent=mode==='paid'?`При подтверждении будет списано ${perk.cost} ${pointsWord(perk.cost)}. После покупки останется ${shop.points-perk.cost} ${pointsWord(shop.points-perk.cost)}.`:mode==='free'?'Вы используете один бесплатный выбор за уровень; очки навыков не будут списаны.':`Действие классового перка закрепляется для навыков: ${skills.join(', ')}. Очки навыков не расходуются.`;
   $('perk-scene-label').hidden=mode==='class';$('perk-scene-confirm').checked=false;$('perk-confirm').disabled=mode!=='class';$('perk-confirm').textContent=mode==='paid'?`Купить за ${perk.cost} ${pointsWord(perk.cost)}`:mode==='free'?'Получить бесплатно':'Закрепить выбор';$('perk-dialog').showModal();
 }
@@ -400,3 +393,4 @@ $('perk-dialog').addEventListener('cancel',event=>{if(busy)event.preventDefault(
 document.querySelectorAll('[data-perk-filter]').forEach(button=>button.addEventListener('click',()=>{perkFilter=button.dataset.perkFilter;document.querySelectorAll('[data-perk-filter]').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));renderPerks();play('click');}));
 setInterval(()=>{if(pendingPerk&&!busy&&!document.hidden)loadPerks();},15000);
 start();
+
