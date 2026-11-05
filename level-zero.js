@@ -1,11 +1,11 @@
 'use strict';
 // One continuous level. Coordinates are shared by sprites, walls, doors and navigation.
 window.createLevelZero = function () {
- const s={id:'foyer',w:44,h:49,label:'Уровень 0 · Вход и контроль',tiles:new Set(),blocked:new Set(),walls:[],facets:[],doors:[],objects:[],shapes:[]};
+ const s={id:'foyer',w:44,h:51,label:'Уровень 0 · Вход и контроль',tiles:new Set(),blocked:new Set(),walls:[],facets:[],doors:[],objects:[],shapes:[]};
  const hall=[[16,6],[24,6],[29,10],[32,14],[32,22],[29,26],[24,30],[16,30],[11,26],[8,22],[8,14],[11,10]];
  s.hall=hall;s.shapes.push(hall);
  const rectangle=(x,y,w,h)=>{s.shapes.push([[x,y],[x+w,y],[x+w,y+h],[x,y+h]]);};
- rectangle(16,29,8,19); // Network entrance → treatment → access control → foyer.
+ rectangle(16,29,8,21); // Network entrance → treatment → access control → foyer.
  rectangle(31,16,11,6); // Independent surface airlock.
  rectangle(3,15,6,6);  // Residential stairs A.
  const segment=(x,y,ex,ey,low=false,internal=false)=>{
@@ -25,20 +25,20 @@ window.createLevelZero = function () {
  // A single descent; the former second bay is sealed into the perimeter.
  segment(3,15,8,15);segment(3,21,8,21,true);segment(3,15,3,21);
  // Continuous external walls of the arrival wing and the surface branch.
- segment(16,30,16,48);segment(24,30,24,48,true);
- segment(16,48,18,48,true);segment(22,48,24,48,true);
+ segment(16,30,16,50);segment(24,30,24,50,true);
+ segment(16,50,18,50,true);segment(22,50,24,50,true);
  segment(32,16,42,16);segment(32,22,42,22,true);
  segment(42,16,42,17,true);segment(42,21,42,22,true);
  const door=(id,x,y,axis,span,extra={})=>{const d={id,x,y,axis,ux:axis==='x'?1:0,uy:axis==='y'?1:0,span,kind:'door',door:true,depth:x+y+span/2,...extra};s.doors.push(d);return d;};
  // Treatment lanes share a checkpoint, but each has its own animated interlock.
- for(const y of[36,42]){
+ for(const y of[38,44]){
   for(const [a,b]of[[16,17],[19,21],[23,24]])segment(a,y,b,y,false,true);
-  for(const [lane,x]of[['A',17],['B',21]])door('clean'+(y===42?'Outer':'Inner')+lane,x,y,'x',2,{internal:true,chamber:lane,label:y===42?'Открыть камеру '+lane:'Открыть внутреннюю дверь',target:'ДЕЗАКТИВАЦИЯ · КАМЕРА '+lane,requiresClean:y===36});
+  for(const [lane,x]of[['A',17],['B',21]])door('clean'+(y===44?'Outer':'Inner')+lane,x,y,'x',2,{internal:true,chamber:lane,label:y===44?'Открыть камеру '+lane:'Открыть внутреннюю дверь',target:'ДЕЗАКТИВАЦИЯ · КАМЕРА '+lane,requiresClean:y===38});
  }
- segment(20,36,20,42,false,true);
+ segment(20,38,20,44,false,true);
  segment(16,32,19,32,false,true);segment(21,32,24,32,false,true);
  door('accessGate',19,32,'x',2,{internal:true,checkpoint:true,label:'Пройти контроль доступа',target:'КОНТРОЛЬ ДОСТУПА'});
- door('networkGate',18,48,'x',4,{action:'network',label:'О системе бункеров',target:'ПОДЗЕМНАЯ СИСТЕМА',approach:[20,46.5]});
+ door('networkGate',18,50,'x',4,{action:'network',label:'О системе бункеров',target:'ПОДЗЕМНАЯ СИСТЕМА',approach:[20,48.5]});
  segment(35,16,35,17,false,true);segment(35,20,35,22,false,true);
  door('surfaceInner',35,17,'y',3,{internal:true,label:'Открыть изолированный шлюз',target:'МАРШРУТ НА ПОВЕРХНОСТЬ'});
  door('surfaceGate',42,17,'y',4,{action:'denied',blast:true,label:'Попытаться выйти',target:'ПОВЕРХНОСТЬ · ОСОБЫЙ ДОПУСК',approach:[40.5,19]});
@@ -54,28 +54,25 @@ window.createLevelZero = function () {
   const sprite=facing[0]>0?'kioskX':facing[0]<0?'kioskNegX':facing[1]>0?'kioskY':'kioskNegY';
   return prop(id,sprite,x,y,scale,{...extra,facing});
  };
- // Enclosed reception island. Every counter module occupies the same one-tile grid.
- for(let i=0;i<6;i++)prop(i===2?'registration':'counterPart'+i,i===2?'receptionTill':'receptionMiddle',16.5+i,11.5,1.16,{...(i===2?{action:'registration',label:'Оформить заселение',target:'РЕГИСТРАЦИЯ',approach:[18.5,12.5]}:{})});
- for(const x of[16.5,21.5])for(const y of[9.5,10.5]){
-  const gate=x===16.5&&y===9.5;
-  prop('counterWing'+x+'_'+y,gate?'receptionGate':'receptionMiddle',x,y,1.16,{flip:!gate});
- }
- for(let i=0;i<6;i++)prop('counterBack'+i,i===3?'receptionWorktop':'receptionMiddle',16.5+i,8.5,1.16,{flip:true});
- for(const x of[18,20])prop('receptionChair'+x,'receptionSeatY',x+.5,10.1,1.5,{facing:[0,1]});
- // Two short banks rest against the straight centre facet of the circular wall.
- // Their native isometric direction is preserved; no cabinet is bent around the arc.
- for(const [i,x]of[16.8,17.8,22.1,23.1].entries())
-  prop('archiveCabinet'+i,'archiveCabinet',x,6.95,1.05,{flip:true,footprint:[Math.floor(x),6,1,1],facing:[0,1]});
+ // U-shaped desk is joined from native modules on their original 32x16 grid.
+ prop('registration','receptionUnit',17,10,38/32,{pivot:[140,72],hotspot:[19,13,1.25],blocked:false,depth:35,action:'registration',label:'Оформить заселение',target:'РЕГИСТРАЦИЯ',approach:[18.5,13.5]});
+ for(let x=16;x<22;x++)s.blocked.add(x+',12');
+ for(const x of[16,21])for(let y=9;y<12;y++)s.blocked.add(x+','+y);
+ prop('staffChair','chair',18.5,10.6,1.2,{flip:true,facing:[0,1]});
+ for(const [i,x]of[17,18.2].entries())prop('records'+i,'recordsCabinet',x,7.1,.82,{flip:true});
+ prop('recordsLow','cabinet',21.7,7.2,1.05);
+ // A real original guide lies on the desk, independently of the housing controls.
+ prop('deskGuide','guideBook',19.6,12.4,1,{kind:'publication',blocked:false,book:'guide',action:'publication',label:'Открыть руководство жителя',target:'РУКОВОДСТВО ЖИТЕЛЯ',approach:[20.5,13.5],z:1.18,depth:35.1});
  // One main public terminal; greeting and instructions are fixed to the architecture below.
  kiosk('mainTerminal',23.5,10.5,1.3,{action:'terminal',label:'Открыть главный терминал',target:'ГЛАВНЫЙ ТЕРМИНАЛ',approach:[23.5,12.5]});
  // Two quiet seating pockets, facing the open hall. The central route remains clear.
  for(const [i,y]of[[0,23.5],[1,25.5]]){
   prop('sofa'+i,'sofa',12.5,y,1.7,{footprint:[11,Math.floor(y)-1,2,2]});
-  prop('coffeeTable'+i,'coffeeRound',14.5,y+1,1.1,{foot:.92,action:'magazines',label:'Посмотреть брошюры',target:'ЗОНА ОТДЫХА',approach:[15.5,y+1]});
+  prop('coffeeTable'+i,'coffeeRound',14.5,y+1,1.1,{foot:.92,...(i===0?{action:'publication',book:'special',label:'Открыть You’re SPECIAL!',target:'КНИЖКА ВОЛТ-ТЕК',approach:[15.5,y+1]}:{})});
  }
  for(const [i,x,y]of[[0,27.4,11.7],[1,29.4,13.7]]){
   prop('eastSofa'+i,'sofa',x,y,1.7,{flip:true,footprint:[Math.floor(x)-1,Math.floor(y),2,2]});
-  prop('eastTable'+i,'coffeeRound',x-1,y+2.3,1.1,{foot:.92,action:'magazines',label:'Посмотреть брошюры',target:'ЗОНА ОТДЫХА · ВОСТОЧНАЯ',approach:[x-1.9,y+2.3]});
+  prop('eastTable'+i,'coffeeRound',x-1,y+2.3,1.1,{foot:.92,...(i===0?{action:'publication',book:'guide',label:'Открыть руководство жителя',target:'РУКОВОДСТВО ЖИТЕЛЯ',approach:[x-1.9,y+2.3]}:{})});
  }
  prop('water','waterDispenser',16.5,25.5,.82,{action:'water',label:'Набрать питьевую воду',target:'ПИТЬЕВАЯ ВОДА · ЗОНА ОТДЫХА',approach:[17.5,25.5]});
  prop('waterSupplies','luggageCabinet',15.3,28.5,.82,{action:'container',inventory:'waterSupplies',label:'Открыть запас для зоны отдыха',target:'ЗАПАС ДЛЯ ЗОНЫ ОТДЫХА',approach:[16.5,28.5]});
@@ -84,19 +81,19 @@ window.createLevelZero = function () {
   prop(id,sprite,x,y,1.5,{planter:true});
  prop('stairA',null,6.2,18,1,{kind:'stairs',axis:'x',action:'stairs',label:'Спуск на уровень 1',target:'ЖИЛОЙ СЕКТОР · УРОВЕНЬ 1',approach:[8.5,18.5],footprint:[3,15,4,6]});
  // A single bank of metal luggage cells faces the foyer, with a clear aisle in front.
- for(let i=0;i<6;i++)prop(i===2?'baggage':'lockerBank'+i,'baggageLockers',10.8,12.4+i*.58,.83,{facing:[1,0],...(i===2?{action:'container',inventory:'baggage',label:'Осмотреть ячейки хранения',target:'ХРАНЕНИЕ БАГАЖА',approach:[12.5,14.5]}:{})});
+ for(let i=0;i<6;i++)prop(i===2?'baggage':'lockerBank'+i,'baggageLockers',10.8,12.4+i*.58,.83,{facing:[1,0],action:'container',inventory:'baggage'+(i+1),label:'Открыть ячейку № '+String(i+1).padStart(2,'0'),target:'ХРАНЕНИЕ БАГАЖА',approach:[12.5,12.5+i*.58],number:i+1});
  // Emergency supplies belong to the service airlock, away from reception and luggage.
  prop('serviceBox','box',36.6,17.1,1.5,{foot:.88,action:'container',inventory:'filters',label:'Открыть ящик с фильтрами',target:'ЗАПАСНЫЕ ФИЛЬТРЫ',approach:[36.5,19.5]});
  prop('filters','supplyCase',38.3,17.1,1.25,{foot:.88,action:'container',inventory:'emergency',label:'Открыть аварийный комплект',target:'АВАРИЙНЫЙ КОМПЛЕКТ',approach:[38.5,19.5]});
  prop('shaft',null,20,19,1,{kind:'floorMarker',blocked:false,action:'shaft',label:'О лифтовой шахте',target:'ЛИФТОВОЙ УЗЕЛ · ЭТАЖОМ НИЖЕ',approach:[21.5,20.5]});
- kiosk('scanner',22.6,33.5,1.1,{action:'scan',label:'Проверить допуск',target:'КОНТРОЛЬ ДОСТУПА',approach:[21.5,34.5]});
- prop('robot','robotSprite',17.6,33.7,1.25,{action:'robot',label:'Обратиться к контроллеру',target:'РОБОТ-КОНТРОЛЛЕР',approach:[18.5,34.5]});
+ kiosk('scanner',22.6,34.5,1.1,{action:'scan',label:'Проверить допуск',target:'КОНТРОЛЬ ДОСТУПА',approach:[21.5,35.5]});
+ prop('robot','robotSprite',17.8,34.6,1.25,{action:'robot',label:'Обратиться к контроллеру',target:'РОБОТ-КОНТРОЛЛЕР',approach:[19.5,35.5],approaches:[[19.5,35.5],[18.5,35.5],[19.5,34.5]]});
  for(const [lane,x]of[['A',16.6],['B',23.5]]){
-  kiosk('cleanControl'+lane,x,39.4,.95,{chamber:lane,action:'decon',label:'Запустить обработку · '+lane,target:'ДЕЗАКТИВАЦИЯ · КАМЕРА '+lane,approach:[lane==='A'?18.5:22.5,39.5]});
-  prop('uniform'+lane,'uniformCrate',x,37.7,1.15,{foot:.88,action:'container',inventory:'uniform',label:'Открыть контейнер с формой',target:'ЧИСТАЯ ФОРМА · VAULT-TEC',approach:[lane==='A'?18.5:22.5,37.5]});
+  kiosk('cleanControl'+lane,x,41.4,.95,{chamber:lane,action:'decon',label:'Запустить обработку · '+lane,target:'ДЕЗАКТИВАЦИЯ · КАМЕРА '+lane,approach:[lane==='A'?18.5:22.5,41.5]});
+  prop('uniform'+lane,'uniformCrate',x,39.7,1.15,{foot:.88,action:'container',inventory:'uniform',label:'Открыть контейнер с формой',target:'ЧИСТАЯ ФОРМА · VAULT-TEC',approach:[lane==='A'?18.5:22.5,39.5]});
  }
- prop('entryStorage','luggageCabinet',16.8,44.3,.82,{footprint:[16,43,1,2],action:'container',inventory:'entryStorage',label:'Осмотреть входной запас',target:'ВХОДНОЙ ЗАПАС',approach:[18.5,44.5]});
- prop('entrySupplies','supplyCase',23.3,45.2,.85,{action:'container',inventory:'sanitary',label:'Открыть санитарный комплект',target:'САНИТАРНЫЙ КОМПЛЕКТ',approach:[22.5,45.5]});
+ prop('entryStorage','luggageCabinet',16.8,46.3,.82,{footprint:[16,45,1,2],action:'container',inventory:'entryStorage',label:'Осмотреть входной запас',target:'ВХОДНОЙ ЗАПАС',approach:[18.5,46.5]});
+ prop('entrySupplies','supplyCase',23.3,47.2,.85,{action:'container',inventory:'sanitary',label:'Открыть санитарный комплект',target:'САНИТАРНЫЙ КОМПЛЕКТ',approach:[22.5,47.5]});
  kiosk('surfacePanel',40.3,17.1,1.1,{action:'denied',label:'Запросить доступ на Поверхность',target:'ОСОБЫЙ ДОПУСК',approach:[40.5,18.5]});
  // Flat sprite faces are attached to their real supporting wall, including wide fixtures.
  const mount=(id,sprite,x,y,z,width,height,extra={})=>{
@@ -111,11 +108,13 @@ window.createLevelZero = function () {
  };
  mount('welcomeScreen','welcomePoster',14,7.6,1.45,1.65,1.25,{action:'welcome',label:'Прочитать приветствие',target:'VAULT-TEC ВАС ЖДАЛИ',approach:[14.5,9.5]});
  mount('notice','noticePanel',25.3,7.1,1.42,1.25,.95,{action:'notices',label:'Прочитать памятку',target:'ПАМЯТКА ПРИБЫВШЕМУ',approach:[24.5,8.5]});
- mount('receptionPoster','welcomePoster',18.9,6,1.22,.95,1.14,{wallDisplay:true});
- mount('receptionCommunity','communityPoster',20.1,6,1.22,.95,1.14,{wallDisplay:true});
- mount('receptionClock','receptionClock',19.5,6,1.94,.6,.6,{wallDisplay:true});
- mount('airlockScreen','entryPanel',16,46,1.5,1.4,1,{action:'airlock',label:'Прочитать инструкцию',target:'ВХОД ИЗ СИСТЕМЫ БУНКЕРОВ',approach:[18.5,46.5]});
+ mount('receptionPoster','welcomePoster',19.1,6,1.22,.95,1.14,{wallDisplay:true});
+
+ mount('receptionClock','receptionClock',20.7,6,1.94,.6,.6,{wallDisplay:true});
+ mount('airlockScreen','entryPanel',16,48,1.5,1.4,1,{action:'airlock',label:'Прочитать инструкцию',target:'ВХОД ИЗ СИСТЕМЫ БУНКЕРОВ',approach:[18.5,46.5]});
  mount('surfaceInfo','surfaceDisplay',38.5,16,1.5,1.65,1.12,{action:'surfaceInfo',label:'Прочитать ограничения',target:'ВНЕШНИЙ КОНТУР',approach:[38.5,18.5]});
+ mount('stairSign','entryPanel',3,18,1.65,2,1,{display:'01 ↓',wallDisplay:true});
+ mount('networkSign','entryPanel',16,49,1.7,2,.75,{display:'СИСТЕМА ПЕРЕХОДОВ',wallDisplay:true});
  mount('surfaceSystems','systemsPanel',36.5,16,1.4,.8,.9,{action:'systems',label:'Проверить системы убежища',target:'ЖИЗНЕОБЕСПЕЧЕНИЕ',approach:[36.5,18.5]});
  // Fixtures are embedded in their own panel, centred away from seams and corners.
  for(const [f,wall]of s.facets.entries()){
@@ -135,6 +134,8 @@ window.createLevelZero = function () {
  }
  s.clearLanes=[{x:8,y:17,w:24,h:4},{x:18,y:21,w:4,h:11}];
  s.zones=[{name:'Восточная зона отдыха',x:25,y:10,w:7,h:7},{name:'Зона отдыха и питьевая вода',x:11,y:22,w:7,h:7},{name:'Хранение багажа',x:10,y:11,w:4,h:6}];
- s.chambers={A:{x:16.25,y:36.3,w:3.5,h:5.4},B:{x:20.25,y:36.3,w:3.5,h:5.4}};
+ s.chambers={A:{x:16.25,y:38.3,w:3.5,h:5.4},B:{x:20.25,y:38.3,w:3.5,h:5.4}};
+ s.checkpoint={x:16,y:32,w:8,h:6};
+ s.entry={x:20.5,y:47.5,camY:45.5};
  return s;
 };

@@ -19,14 +19,17 @@ async function boot(saved){
 (async()=>{
  const a=await boot(),{api,d,frames,object,go,actions}=a;
  assert.equal(d.level.objects.filter(o=>o.kind==='stairs').length,1);assert.equal(api.confirmClass('raider'),false,'Cannot register away from control');
- go('cleanOuterA');d.act();frames(12);assert(!d.canStep(18.5,42.5,18.5,41.5),'Opening door blocks passage');frames(20);
+ go('cleanOuterA');d.act();frames(12);assert(!d.canStep(18.5,44.5,18.5,43.5),'Opening door blocks passage');frames(20);
  go('cleanControlA');frames(45);assert(!d.state.open.cleanOuterA,'Door closes after the player clears it');
  assert(!d.state.open.cleanInnerA);d.act();assert(d.state.cycle);frames(230);assert.equal(d.state.cycle,null);assert(d.state.cleaned.A);assert(!d.state.cleaned.B);
+ assert.equal(d.level.checkpoint.h,6);
+ for(const point of object('robot').approaches)assert(d.pathTo(...point),'Robot approach must be reachable');
+ go('robot');d.act();assert(actions.includes('robot'));
  go('accessGate');d.act();assert(actions.includes('scan'));assert(!d.state.open.accessGate,'Class selection must precede admission');assert(!api.confirmClass('admin'));
  for(const cls of['raider','resident','ghoul']){assert(api.confirmClass(cls));assert.equal(api.getPass().characterClass,cls);assert.equal(a.storage.get('starfield-character-class'),cls);}
  assert.equal(api.getPass().label,'Гуль');frames(32);go('registration');d.act();assert(actions.includes('registration'));frames(40);assert(!d.state.open.accessGate,'Access gate closes behind admitted character');
  for(const o of d.level.objects.filter(o=>o.action))assert(d.pathTo(...o.approach,true),'Unreachable object: '+o.id);
- go('stairA');go('surfaceInner');d.act();frames(32);go('surfaceGate');frames(40);assert(!d.state.open.surfaceInner,'Surface inner door closes outward');d.act();assert(actions.includes('denied'));assert(!d.state.open.surfaceGate);
+ go('stairA');go('surfaceInner');d.act();frames(32);go('surfaceGate');frames(40);assert(!d.state.open.surfaceInner,'Surface inner door closes outward');d.act();frames(20);assert(actions.includes('denied'));assert(!d.state.open.surfaceGate);
  go('surfaceInner');d.act();frames(32);go('registration');frames(40);assert(!d.state.open.surfaceInner,'Surface inner door closes inward');
  // Opening occupied doorway remains safe, including an accidental closure request.
  const door=object('surfaceInner');d.player.x=35;d.player.y=18.5;d.state.path=[];d.setDoor(door,true);d.state.anim[door.id]=1;frames(360);assert(d.state.open[door.id]);d.state.open[door.id]=false;frames(2);assert(d.state.open[door.id],'Occupied door reopens');
