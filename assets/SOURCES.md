@@ -66,3 +66,8 @@ https://drive.google.com/drive/folders/1lHiN5RV-PoGY-xiBOwT84KhPHkp43fii
 - `books/special-cover.webp`: оригинальная игровая обложка **You’re SPECIAL!** из Fallout 4, [скриншот Steam](https://images.steamusercontent.com/ugc/279595144905238398/15544E6E2A16250C6C4CEF67F68A9423FA63B451/).
 - `books/special-page.webp`: оригинальный игровой разворот **You’re SPECIAL!**, Fallout 3, [изображение](https://www.kindpng.com/picc/m/102-1027718_fallout-3-special-book-fallout-3-your-special.png). Удалено только внешнее белое поле; текст и иллюстрация сохранены.
 - Миниатюры изданий на столиках используют те же исходные изображения в плоскости столешницы. Обложки, страницы и мебель не сгенерированы. Текст табло камер, номера ячеек и указатели — интерфейс, нанесённый на уже используемые игровые панели.
+## Жилой сектор · уровень 1
+
+- Стены, пол, двери и часть мебели собраны из существующих листов Fallout Tactics; настенный телевизор — обрезанный корпус монитора из набора мебели, унитаз в люксе — боковой ракурс из листа [Bathroom Objects](https://www.spriters-resource.com/pc_computer/fallouttactics/).
+- Журналы и плакаты — существующие обложки и изображения Fallout из [Fallout Wiki](https://fallout.wiki/). Часть мелких предметов взята из спрайтов Project Zomboid; ковёр — из Arcanum. Робоглаз использует пиксельные кадры Fallout 2.
+- Музыка: **Backbay Lounge**, Kevin MacLeod (incompetech.com), [страница композиции](https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1700068), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Аудио сведено в моно, сокращено и подготовлено для повтора.

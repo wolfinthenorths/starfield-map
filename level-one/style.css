@@ -1,0 +1,66 @@
+#starfield-level-one-walk{--sf-ink:#e9e2ca;--sf-dim:#b1b6a4;--sf-key:#c9b680;--sf-edge:#5b6656;--sf-bg:#131a16;--sf-panel:#212b23;box-sizing:border-box;color:var(--sf-ink);background:var(--sf-bg);font-family:inherit;max-width:100%;color-scheme:dark}
+#starfield-level-one-walk *,#starfield-level-one-walk *::before,#starfield-level-one-walk *::after{box-sizing:inherit}
+#starfield-level-one-walk [hidden]{display:none!important}
+#starfield-level-one-walk .sf-top{display:flex;gap:.6rem 1.05rem;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:.75rem .88rem;background:#202922;border-bottom:1px solid var(--sf-edge)}
+#starfield-level-one-walk .sf-place{flex:1 1 auto;min-width:min(11rem,100%);border-left:2px solid var(--sf-key);padding-left:.65rem}
+#starfield-level-one-walk .sf-eyebrow{font-size:.72rem;letter-spacing:.15em;color:var(--sf-key);font-family:monospace}
+#starfield-level-one-walk .sf-title{font-size:1.08rem;font-weight:600;line-height:1.15;margin:.2rem 0 0;color:var(--sf-ink)}
+#starfield-level-one-walk .sf-zone{display:block;color:var(--sf-dim);font-size:.78rem;margin-top:.22rem}
+#starfield-level-one-walk .sf-nav,#starfield-level-one-walk .sf-tools{display:flex;align-items:center;gap:.32rem;flex-wrap:wrap;min-width:0}
+#starfield-level-one-walk .sf-nav{justify-content:flex-start}
+#starfield-level-one-walk button,#starfield-level-one-walk select{font:inherit;font-size:.84rem;color:var(--sf-ink);background:#273228;border:1px solid var(--sf-edge);border-radius:3px;min-height:2.15rem;padding:.39rem .58rem;max-width:100%;line-height:1.13}
+#starfield-level-one-walk button:hover:enabled,#starfield-level-one-walk select:hover:enabled,#starfield-level-one-walk button[aria-pressed="true"]{border-color:var(--sf-key);color:#f1e3ab;background:#354136}
+#starfield-level-one-walk button:focus-visible,#starfield-level-one-walk select:focus-visible{outline:2px solid var(--sf-key);outline-offset:2px}
+#starfield-level-one-walk button:disabled,#starfield-level-one-walk select:disabled{opacity:.52}
+#starfield-level-one-walk select{max-width:min(11.4rem,100%)}
+#starfield-level-one-walk .sf-stage{position:relative;display:block;width:100%;aspect-ratio:16/9;min-height:17.2rem;background:var(--sf-bg);isolation:isolate}
+#starfield-level-one-walk canvas{display:block;width:100%;height:100%;position:absolute;inset:0;touch-action:none;cursor:grab}
+#starfield-level-one-walk canvas:active{cursor:grabbing}
+#starfield-level-one-walk canvas[data-point="object"]{cursor:crosshair}
+#starfield-level-one-walk .sf-bottom{border-top:1px solid var(--sf-edge);display:flex;justify-content:space-between;align-items:center;gap:.46rem .85rem;flex-wrap:wrap;padding:.65rem .85rem;background:#202922}
+#starfield-level-one-walk .sf-info{margin:0;flex:1 1 13rem;font-size:.85rem;line-height:1.35;color:var(--sf-dim)}
+#starfield-level-one-walk .sf-act{border-color:#998a61;min-width:6.1rem}
+#starfield-level-one-walk .sf-panel{position:absolute;z-index:1;inset:0;display:flex;align-items:flex-end;justify-content:center;background:linear-gradient(transparent 25%,#0b100bb5);padding:.65rem}
+#starfield-level-one-walk .sf-panel-body{width:min(100%,31rem);max-height:100%;overflow:auto;border:1px solid #9b8c63;background:#202a23;padding:.82rem .9rem .88rem;box-shadow:0 12px 32px #080b08a0}
+#starfield-level-one-walk .sf-panel-head{display:flex;justify-content:space-between;align-items:flex-start;gap:.65rem}
+#starfield-level-one-walk .sf-panel-head h3{font-size:1rem;margin:.26rem 0 .37rem;line-height:1.15;color:var(--sf-ink)}
+#starfield-level-one-walk .sf-panel-head button{min-width:2.15rem}
+#starfield-level-one-walk .sf-panel-text{color:var(--sf-dim);font-size:.9rem;margin:.35rem 0;line-height:1.36;white-space:pre-line}
+#starfield-level-one-walk .sf-panel-text:empty{display:none}
+#starfield-level-one-walk .sf-panel-art{display:block;max-height:6.2rem;max-width:100%;width:auto;margin:.35rem auto .6rem;object-fit:contain;image-rendering:pixelated}
+#starfield-level-one-walk .sf-panel-art.sf-cover{max-height:min(12rem,56vw);image-rendering:auto}
+#starfield-level-one-walk canvas.sf-inspection{position:static;width:100%;height:auto;margin:.35rem 0 .57rem;border:1px solid #536351;background:#17201a;image-rendering:pixelated;touch-action:auto;cursor:default}
+#starfield-level-one-walk .sf-panel-buttons{display:flex;flex-wrap:wrap;gap:.38rem}
+#starfield-level-one-walk .sf-panel-buttons:empty{display:none}
+#starfield-level-one-walk .sf-panel-buttons button{border-color:#8e8560}
+#starfield-level-one-walk .sf-code{display:flex;flex-wrap:wrap;align-items:center;gap:.45rem;margin-top:.6rem}
+#starfield-level-one-walk .sf-code input{min-width:5ch;width:9ch;padding:.5rem;color:var(--sf-ink);background:#141c16;border:1px solid var(--sf-edge);font:inherit;font-size:1rem}
+#starfield-level-one-walk .sf-code-error{margin:0;flex-basis:100%;font-size:.85rem;color:#f5b8a5}
+#starfield-level-one-walk .sf-code-error:empty{display:none}
+@media(max-width:560px){#starfield-level-one-walk .sf-top{padding:.58rem .65rem}#starfield-level-one-walk .sf-bottom{padding:.55rem .65rem}#starfield-level-one-walk .sf-nav,#starfield-level-one-walk .sf-tools{gap:.28rem}}
+@media(pointer:coarse){#starfield-level-one-walk button,#starfield-level-one-walk select{min-height:2.75rem}#starfield-level-one-walk .sf-panel-head button{min-width:2.75rem}}
+/* The game uses the whole viewport, with controls outside the playing field. */
+#starfield-level-one-walk { display:grid; grid-template-rows:auto minmax(0,1fr) auto; height:100%; }
+#starfield-level-one-walk .sf-stage { aspect-ratio:auto; min-height:0; }
+#starfield-level-one-walk .sf-top {
+ padding: max(.57rem, env(safe-area-inset-top)) max(.85rem, env(safe-area-inset-right)) .57rem max(.85rem, env(safe-area-inset-left));
+}
+#starfield-level-one-walk .sf-bottom {
+ padding:.52rem max(.85rem,env(safe-area-inset-right)) max(.52rem,env(safe-area-inset-bottom)) max(.85rem,env(safe-area-inset-left));
+}
+#starfield-level-one-walk .sf-nav .sound-toggle { min-width:2.45rem; display:grid; place-items:center; position:relative; }
+#starfield-level-one-walk .sf-nav svg { width:1.05rem; height:1.05rem; }
+#starfield-level-one-walk .sf-panel { align-items:center; padding:.5rem max(.75rem,env(safe-area-inset-right)) .5rem max(.75rem,env(safe-area-inset-left)); }
+#starfield-level-one-walk .sf-panel-body { overscroll-behavior:contain; }
+#starfield-level-one-walk .sf-code input { font-size:max(16px,1rem); }
+@media (min-width:1200px) and (min-height:650px) {
+ #starfield-level-one-walk .sf-title { font-size:clamp(20px,1.36vw,30px); }
+ #starfield-level-one-walk button,#starfield-level-one-walk select { min-height:2.65rem; font-size:clamp(14px,1vw,21px); }
+ #starfield-level-one-walk .sf-info { font-size:clamp(14px,.95vw,20px); }
+}
+@media (max-height:480px) and (orientation:landscape) {
+ #starfield-level-one-walk .sf-top,#starfield-level-one-walk .sf-bottom { gap:.28rem .55rem; }
+ #starfield-level-one-walk .sf-top { padding-top:max(.35rem,env(safe-area-inset-top));padding-bottom:.35rem; }
+ #starfield-level-one-walk .sf-bottom { padding-top:.34rem; }
+ #starfield-level-one-walk .sf-panel-art.sf-cover { max-height:min(9rem,38vh); }
+}

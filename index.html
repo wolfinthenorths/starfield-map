@@ -5,8 +5,8 @@
 <meta name="description" content="Интерактивная карта убежища Starfield — Dawn of the Dead."><title>STARFIELD · Interactive map</title>
 <meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Starfield">
 <link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="assets/app-icon-192.png">
-<link rel="icon" href="favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="styles.css">
-<script src="data.js" defer></script><script src="level-zero.js" defer></script><script src="engine.js" defer></script><script src="audio.js" defer></script><script src="app.js" defer></script>
+<link rel="icon" href="favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="level-one/style.css">
+<script src="data.js" defer></script><script src="level-zero.js" defer></script><script src="engine.js" defer></script><script src="audio.js" defer></script><script src="level-one/runtime.js" defer></script><script src="level-one/walk.js" defer></script><script src="app.js" defer></script>
 </head>
 <body>
 <main id="app">
@@ -29,6 +29,47 @@
  <div id="status" class="game-status" role="status"></div>
  <div class="game-bottom"><div class="movement-pad" aria-label="Движение"><button id="move-up" aria-label="Идти вверх">↑</button><button id="move-left" aria-label="Идти влево">←</button><button id="move-down" aria-label="Идти вниз">↓</button><button id="move-right" aria-label="Идти вправо">→</button></div><div class="keyboard-hint" aria-hidden="true">Клик по полу · идти<br>Потянуть карту · обзор</div><div id="action-wrap" class="action-wrap" hidden><span id="target-label">РЕГИСТРАЦИЯ</span><button id="action" class="primary" disabled>Подойдите к объекту</button></div></div>
  <div id="processing" class="processing" hidden><span>САНИТАРНЫЙ ПРОТОКОЛ</span><strong id="process-label">Подготовка камеры</strong><progress id="process-progress" max="1" value="0"></progress></div>
+</section>
+<section id="residential" class="screen" aria-label="Прогулка по первому уровню" hidden inert>
+<div id="starfield-level-one-walk">
+<header class="sf-top">
+ <div class="sf-place"><div class="sf-eyebrow">STARFIELD / LEVEL 01</div><h2 class="sf-title" data-room>Residential Lobby</h2><span class="sf-zone" data-zone hidden></span></div>
+ <nav class="sf-nav" aria-label="Карта и звук">
+  <select data-doors data-wait disabled aria-label="Выбрать дверь"><option value="">Двери</option></select>
+  <button type="button" data-walls data-wait disabled aria-pressed="false" aria-label="Полные стены">Стены</button>
+  <button type="button" id="residential-levels">Этажи</button>
+  <button type="button" class="fullscreen-toggle" id="residential-fullscreen" aria-label="На весь экран" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="expand-icon" d="M9 3H3v6m12-6h6v6M3 15v6h6m12-6v6h-6"/><path class="collapse-icon" d="M3 9h6V3m6 0v6h6M9 21v-6H3m12 6v-6h6"/></svg></button>
+  <button type="button" data-music data-vault-sound="music" class="sound-toggle" aria-pressed="true" aria-label="Выключить музыку"><span aria-hidden="true">♫</span></button>
+  <button type="button" data-vault-sound="effects" class="sound-toggle" aria-pressed="true" aria-label="Выключить звуки действий"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4zM17 8q5 4 0 8"/></svg></button>
+ </nav>
+</header>
+<div class="sf-stage" data-stage>
+ <canvas tabindex="0" data-world width="960" height="540" aria-label="Изометрическая карта первого уровня. Нажмите на пол, чтобы персонаж пошёл туда."></canvas>
+ <div class="sf-panel" data-panel hidden role="dialog" aria-modal="true" aria-labelledby="sf-walk-panel-title">
+  <div class="sf-panel-body">
+   <div class="sf-panel-head"><h3 id="sf-walk-panel-title" data-panel-title></h3><button type="button" data-close aria-label="Закрыть">×</button></div>
+   <div class="sf-panel-text" data-panel-text></div>
+   <img class="sf-panel-art" data-panel-art alt="" hidden>
+   <canvas class="sf-inspection" data-inspect width="448" height="170" role="img" hidden></canvas>
+   <div class="sf-panel-buttons" data-panel-buttons></div>
+   <form class="sf-code" data-code-form hidden>
+    <label for="sf-door-code">Код</label><input id="sf-door-code" data-code-input type="password" inputmode="numeric" maxlength="4" autocomplete="off" aria-describedby="sf-code-error">
+    <button type="submit">Открыть</button><p class="sf-code-error" id="sf-code-error" data-code-error role="status"></p>
+   </form>
+  </div>
+ </div>
+</div>
+<footer class="sf-bottom">
+ <p class="sf-info" data-info aria-live="polite">Загружается карта…</p>
+ <div class="sf-tools" aria-label="Камера и действия">
+  <button type="button" data-fit data-wait disabled>Обзор</button>
+  <button type="button" data-center data-wait disabled>К себе</button>
+  <button type="button" data-minus data-wait disabled aria-label="Отдалить">−</button>
+  <button type="button" data-plus data-wait disabled aria-label="Приблизить">+</button>
+  <button type="button" data-act class="sf-act" disabled>Действие</button>
+ </div>
+</footer>
+</div>
 </section>
 <div id="audio-notice" class="audio-notice" role="status" hidden><span id="audio-message"></span><button id="audio-retry">Включить звук</button></div>
 <div id="dialog-layer" class="dialog-layer" hidden><section id="dialog" role="dialog" aria-modal="true" aria-labelledby="dialog-title" class="terminal-dialog"><header><span id="dialog-kicker" class="eyebrow">STARFIELD</span><button id="dialog-close" aria-label="Закрыть окно">×</button></header><h2 id="dialog-title"></h2><div id="dialog-content"></div></section></div>
