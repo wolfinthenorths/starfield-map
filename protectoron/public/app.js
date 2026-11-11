@@ -291,6 +291,20 @@ function renderAchievements({character,achievements}){
   for(const item of achievements){
     const card=document.createElement('article');
     card.className='achievement-card';
+    if(/^ach-\d{3}$/.test(item.id)){
+      const icon=document.createElement('img');
+      icon.className='achievement-icon';
+      icon.alt='';
+      icon.loading='lazy';
+      icon.decoding='async';
+      card.classList.add('achievement-card--illustrated');
+      icon.addEventListener('error',()=>{
+        icon.remove();
+        card.classList.remove('achievement-card--illustrated');
+      },{once:true});
+      icon.src='/assets/achievement-icons/'+item.id+'.png';
+      card.append(icon);
+    }
     const body=document.createElement('div'),title=document.createElement('h2'),description=document.createElement('p');
     title.textContent=item.name;
     description.textContent=item.description;
@@ -301,12 +315,13 @@ function renderAchievements({character,achievements}){
     date.dateTime=earnedAt.toISOString();
     date.textContent=achievementDate.format(earnedAt);
     meta.append(reward,date);
+    body.append(title,description,meta);
     if(item.chapter){
       const chapter=document.createElement('span');
+      chapter.className='achievement-chapter';
       chapter.textContent='Глава '+item.chapter;
-      meta.append(chapter);
+      body.append(chapter);
     }
-    body.append(title,description,meta);
     card.append(body);
     list.append(card);
   }
