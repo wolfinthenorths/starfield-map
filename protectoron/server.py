@@ -222,7 +222,7 @@ def home_keyboard():
             [cb("Повысить доступ", "access"), cb("Задать вопрос", "faq")],
             [cb("Мой журнал", "history"), cb('Имя Выжившего', "character")]]
     if APP_URL:
-        rows.append([app_button('Перки Выжившего', "?view=perks")])
+        rows.append([app_button('Перки Выжившего', "?view=perks"), app_button('Мои ачивки', "?view=achievements")])
         rows.append([app_button()])
     return keyboard(rows)
 
@@ -546,12 +546,18 @@ def handle_update(update):
         return
     if chat.get("type") != "private" or chat.get("id") != user["id"]:
         return
-    if command == "/perks":
+    if command in ("/perks", "/achievements"):
+        if command == "/achievements":
+            message = "«Откройте личный журнал, чтобы посмотреть Ваши ачивки»."
+            button = app_button("Мои ачивки", "?view=achievements")
+        else:
+            message = "«Откройте модуль развития, чтобы проверить Ваш уровень, доступные очки навыков и полученные перки; покупка и бесплатный выбор за уровень оформляются отдельно»."
+            button = app_button("Перки Выжившего", "?view=perks")
         with db() as con:
             if con.execute("SELECT 1 FROM updates WHERE id=?", (update["update_id"],)).fetchone():
                 return
             upsert_profile(con, user)
-            queue(con, user["id"], "«Откройте модуль развития, чтобы проверить Ваш уровень, доступные очки навыков и полученные перки; покупка и бесплатный выбор за уровень оформляются отдельно».", keyboard([[app_button('Перки Выжившего', "?view=perks")]]))
+            queue(con, user["id"], message, keyboard([[button]]))
             con.execute("INSERT INTO updates VALUES(?,?)", (update["update_id"], int(time.time())))
         return
     with db() as con:
@@ -789,6 +795,7 @@ def setup_bot():
                 {"command": "mysterium", "description": 'Получить «Мистериум»'},
                 {"command": "access", "description": "Запросить повышение доступа"},
                 {"command": "perks", "description": "Перки, уровень и очки навыков"},
+                {"command": "achievements", "description": "Мои ачивки"},
                 {"command": "help", "description": "Справочный модуль"},
                 {"command": "history", "description": "Журнал обращений"}]})
             telegram("setMyDescription", {"description": 'Робот-контроллер приветствует Вас, Выживший! Выдача «Мистериума», запросы на повышение доступа, справочный модуль — я помогу со всем!'})
@@ -878,13 +885,25 @@ class Handler(BaseHTTPRequestHandler):
                 self.reply(200, {"ok": True})
                 return
             body = json.loads(self.rfile.read(length))
-            if path not in ("/api/state", "/api/dispense", "/api/access", "/api/profile", "/api/faq", "/api/companion", "/api/collect", "/api/perks", "/api/perk-acquire"):
+            if path not in ("/api/state", "/api/dispense", "/api/access", "/api/profile", "/api/faq",
+                            "/api/companion", "/api/collect", "/api/perks", "/api/perk-acquire", "/api/achievements"):
                 self.reply(404, {"error": "Unknown action"})
                 return
             try:
                 user = validate_init_data(str(body.get("initData", "")))
             except (ValueError, KeyError, TypeError):
                 self.reply(401, {"error": "Откройте робота заново из личного чата с ботом."})
+                return
+            if path == "/api/achievements":
+                try:
+                    result = SHEETS.call({"action": "achievement_state", "telegram_id": str(user["id"])})
+                except SheetsError as error:
+                    if str(error) == "achievements_identity":
+                        self.reply(409, {"error": "Попросите Смотрителя проверить привязку персонажа к Вашему Telegram."})
+                    else:
+                        self.reply(503, {"error": "Мои ачивки временно недоступны. Попробуйте обновить список."})
+                    return
+                self.reply(200, {"character": result["character"], "achievements": result["achievements"]})
                 return
             ROSTER.refresh()
             if path in ("/api/perks", "/api/perk-acquire"):
@@ -995,6 +1014,7 @@ def main():
     init_db()
     threading.Thread(target=BACKUPS.worker, args=(STOP, backup_warning), daemon=True).start()
     threading.Thread(target=SHEETS.worker, args=(STOP,), daemon=True).start()
+    threading.Thread(target=SHEETS.achievement_worker, args=(STOP,), daemon=True).start()
     if TOKEN and APP_URL:
         threading.Thread(target=setup_bot, daemon=True).start()
         threading.Thread(target=outbox_worker, daemon=True).start()

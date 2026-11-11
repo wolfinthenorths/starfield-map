@@ -23,6 +23,19 @@ def signed(user_id=101, now=1000, token="test-token"):
 
 
 class AuthenticationTests(unittest.TestCase):
+    def test_achievements_use_signed_telegram_id(self):
+        body = json.dumps({"initData": signed(101), "telegram_id": "202", "character": "Другой"}).encode()
+        handler = server.Handler.__new__(server.Handler)
+        handler.headers = {"Content-Length": str(len(body))}
+        handler.rfile = io.BytesIO(body)
+        handler.path = "/api/achievements"
+        with patch.object(server, "TOKEN", "test-token"), patch.object(server.time, "time", return_value=1005), \
+                patch.object(server.SHEETS, "call", return_value={"character": "Свой", "achievements": []}) as bridge, \
+                patch.object(handler, "reply") as reply:
+            handler.do_POST()
+        bridge.assert_called_once_with({"action": "achievement_state", "telegram_id": "101"})
+        reply.assert_called_once_with(200, {"character": "Свой", "achievements": []})
+
     def test_valid_signature_and_identity(self):
         self.assertEqual(server.validate_init_data(signed(), token="test-token", now=1005)["id"], 101)
 

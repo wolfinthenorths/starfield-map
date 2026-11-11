@@ -50,7 +50,7 @@ async function api(path, data={}){
   let response;
   // Sheets requests can include a registry refresh and Google's redirect;
   // acquisition also verifies the ledger before committing the same request ID.
-  const timeout=path==='perks'?90000:path==='perk-acquire'?150000:20000;
+  const timeout=path==='perks'?90000:path==='perk-acquire'?150000:path==='achievements'?35000:20000;
   try {response=await fetch(`/api/${path}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({initData,...data}),signal:AbortSignal.timeout(timeout)});}
   catch {throw new Error(path==='perks'?'Не удалось дождаться сведений из реестра системы. Ваши регистрационные данные сохранены; нажмите «Обновить сведения», чтобы повторить проверку.':'Связь с контроллером прервалась; пожалуйста, проверьте соединение и повторите обращение.');}
   const result=await response.json();
@@ -62,6 +62,7 @@ function setTab(name){
   document.querySelectorAll('[data-tab]').forEach(button=>{const active=button.dataset.tab===name;button.classList.toggle('active',active);if(active)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current');});
   play('click');haptic();clearError();
   if(name==='perks')loadPerks();
+  if(name==='achievements')loadAchievements();
 }
 function sync(data){
   if(data.profile)profile=data.profile;
@@ -256,6 +257,8 @@ async function loadSprites(){
 }
 async function start(){
   updateSound();renderFaq(fallbackFaq);renderHistory();
+  const requestedView=new URLSearchParams(location.search).get('view');
+  if(requestedView==='achievements')setTab('achievements');
   try{tg?.ready();tg?.expand();tg?.setHeaderColor('#141914');tg?.setBackgroundColor('#141914');if(tg?.isVersionAtLeast?.('7.10'))tg.setBottomBarColor('#141914');}catch{}
   try{await loadSprites();}catch(e){showError(e.message);}
   try{accessCatalog=await(await fetch('/accesses.json')).json();renderAccesses();}catch{showError('Не удалось получить сведения о службах. Повторите обращение.');}
@@ -273,8 +276,69 @@ async function start(){
     $('profile-form').querySelector('button').disabled=true;
     $('registration-form').querySelector('button').disabled=true;
   }
-  if(new URLSearchParams(location.search).get('view')==='perks')setTab('perks');
+  if(requestedView==='perks')setTab('perks');
 }
+
+let achievementLoading=false;
+const achievementDate=new Intl.DateTimeFormat('ru-RU',{dateStyle:'medium',timeZone:'Asia/Tomsk'});
+function renderAchievements({character,achievements}){
+  const name=$('achievement-character'),status=$('achievement-status'),list=$('achievement-list');
+  name.textContent=character||'';
+  name.hidden=!character;
+  list.replaceChildren();
+  status.hidden=achievements.length>0;
+  status.textContent=character?'У Вашего персонажа пока нет ачивок.':'Попросите Смотрителя привязать персонажа к Вашему аккаунту Telegram.';
+  for(const item of achievements){
+    const card=document.createElement('article');
+    card.className='achievement-card';
+    const icon=document.createElement('img');
+    icon.src=/^ach-[0-9]{3,}$/.test(item.id)?'/assets/achievements/'+item.id+'.jpg':'/assets/terminal-cut.png';
+    icon.addEventListener('error',()=>{icon.src='/assets/terminal-cut.png';},{once:true});
+    icon.alt='';
+    icon.loading='lazy';
+    const body=document.createElement('div'),title=document.createElement('h2'),description=document.createElement('p');
+    title.textContent=item.name;
+    description.textContent=item.description;
+    const meta=document.createElement('div'),reward=document.createElement('strong'),date=document.createElement('time');
+    meta.className='achievement-meta';
+    reward.textContent='+'+item.caps+' крышек';
+    const earnedAt=new Date(item.utc*1000);
+    date.dateTime=earnedAt.toISOString();
+    date.textContent=achievementDate.format(earnedAt);
+    meta.append(reward,date);
+    if(item.chapter){
+      const chapter=document.createElement('span');
+      chapter.textContent='Глава '+item.chapter;
+      meta.append(chapter);
+    }
+    body.append(title,description,meta);
+    card.append(icon,body);
+    list.append(card);
+  }
+}
+
+async function loadAchievements(){
+  if(achievementLoading)return;
+  const refresh=$('achievement-refresh'),status=$('achievement-status');
+  refresh.disabled=true;
+  status.hidden=false;
+  if(!real){
+    status.textContent='Откройте робота из личного чата в Telegram, чтобы увидеть свои ачивки.';
+    return;
+  }
+  achievementLoading=true;
+  status.textContent='Проверяю личный журнал…';
+  try{
+    renderAchievements(await api('achievements'));
+  }catch(error){
+    status.hidden=false;
+    status.textContent=error.message;
+  }finally{
+    achievementLoading=false;
+    refresh.disabled=false;
+  }
+}
+$('achievement-refresh').addEventListener('click',loadAchievements);
 
 let perkCatalog=null,shop=null,perkFilter='small',perkLoading=false,perkSelection=null,pendingPerk=null;
 const classSkillNames=['Анализ','История','Расследование','Инженерия','Медицина','Убеждение'];

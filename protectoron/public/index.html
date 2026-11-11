@@ -6,9 +6,9 @@
   <meta name="theme-color" content="#141914">
   <title>Робот · Протектрон Starfield</title>
   <link rel="icon" href="/assets/mysterium.webp" type="image/webp">
-  <link rel="stylesheet" href="/style.css?v=perks-1">
+  <link rel="stylesheet" href="/style.css?v=achievements-1">
   <script src="/telegram-web-app.js" defer></script>
-  <script src="/app.js?v=approved-copy-20261027" defer></script>
+  <script src="/app.js?v=achievements-1" defer></script>
 </head>
 <body>
   <main class="terminal">
@@ -20,6 +20,7 @@
     <nav class="tabs" aria-label="Разделы робота">
       <button data-tab="dispense" class="active" aria-current="page">Выдача</button>
       <button data-tab="perks">Перки</button>
+      <button data-tab="achievements">Ачивки</button>
       <button data-tab="access">Доступ</button>
       <button data-tab="faq">Справочник</button>
       <button data-tab="history">Журнал</button>
@@ -65,6 +66,15 @@
       <p id="perk-empty" class="fine-print" hidden>Пока Вы не выбрали дополнительные перки. Классовая возможность показана отдельно выше.</p>
       <div id="perk-catalog" class="perk-catalog"></div>
       <p class="notice">Развитие оформляется после ситуации или этапа, вне боя. За каждое повышение уровня доступен один бесплатный малый перк; дополнительные малые и крупные перки приобретаются за очки навыков. Активные перки применяются один раз за главу, а в новой главе доступны снова — повторная покупка не нужна.</p>
+    </section>
+
+    <section id="achievements" class="view" aria-labelledby="achievements-title">
+      <div class="section-heading">
+        <div><h1 id="achievements-title">Мои ачивки</h1><p id="achievement-character" class="section-intro" hidden></p></div>
+        <button id="achievement-refresh" type="button" class="text-button">Обновить</button>
+      </div>
+      <p id="achievement-status" class="empty-state" role="status" aria-live="polite">Проверяю личный журнал…</p>
+      <div id="achievement-list" class="achievement-list"></div>
     </section>
 
     <section id="access" class="view" aria-labelledby="access-title">

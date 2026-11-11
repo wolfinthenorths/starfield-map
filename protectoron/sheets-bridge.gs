@@ -39,6 +39,8 @@ function doPost(e) {
     if(payload.action==='balance') return json_(balance_(payload.character));
     if(payload.action==='shop_state') return json_(shopState(payload.character));
     if(payload.action==='acquire_perk') return json_(acquirePerk(payload));
+    if(payload.action==='achievement_state') return json_(achState_(payload.telegram_id));
+    if(payload.action==='achievement_sync') return json_(achSync_());
     throw new Error('unsupported_action');
   } catch(error) {
     const allowed=['invalid_request','not_configured','expired_request','unauthorized','unsupported_action',
@@ -46,7 +48,7 @@ function doPost(e) {
       'ledger_too_large','invalid_character','ambiguous_character','character_not_found','character_id_missing',
       'duplicate_character_id','invalid_balance','balance_formula','unknown_perk','already_owned','id_conflict',
       'invalid_mode','not_enough_points','level_unknown','no_free_choice','small_only','invalid_class',
-      'invalid_skills','write_check_failed','catalog_mismatch'];
+      'invalid_skills','write_check_failed','catalog_mismatch','achievements_schema','achievements_identity'];
     return json_({ok:false,error:allowed.includes(error.message)?error.message:'bridge_error'});
   }
 }

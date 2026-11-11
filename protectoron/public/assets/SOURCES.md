@@ -12,3 +12,5 @@
 - `audio/box-open.mp3`, `box-close.mp3`, `robot.mp3`: готовые эффекты карты из **Kenney Sci-fi Sounds**, CC0. https://kenney.nl/assets/sci-fi-sounds
 
 Права на графику Fallout принадлежат правообладателям оригинальных игр. Пользовательские материалы переиспользованы для того же фанатского проекта.
+
+The icons in `achievements/` come from the project's achievement catalogue. The artwork is from *Fallout: New Vegas* (Obsidian Entertainment / Bethesda Softworks).

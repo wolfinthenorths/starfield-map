@@ -16,7 +16,8 @@ class SheetsError(RuntimeError):
 
 BUSINESS_ERRORS = {"invalid_balance", "balance_formula", "unknown_perk", "already_owned",
     "id_conflict", "invalid_mode", "not_enough_points", "level_unknown", "no_free_choice",
-    "small_only", "invalid_class", "invalid_skills", "invalid_character", "character_not_found"}
+    "small_only", "invalid_class", "invalid_skills", "invalid_character", "character_not_found",
+    "achievements_schema", "achievements_identity"}
 
 
 class GoogleRedirect(urllib.request.HTTPRedirectHandler):
@@ -38,6 +39,7 @@ class SheetsBridge:
         self.connected = False
         self.write_verified = False
         self.shop_ready = False
+        self.achievements_checked_at = None
         self.opener = urllib.request.build_opener(GoogleRedirect())
 
     @property
@@ -56,15 +58,18 @@ class SheetsBridge:
     def call(self, payload):
         if not self.configured:
             raise SheetsError("not_configured")
-        if payload.get("action") not in ("verify_connection", "balance", "shop_state", "acquire_perk"):
+        action = payload.get("action")
+        if action not in ("verify_connection", "balance", "shop_state", "acquire_perk",
+                          "achievement_state", "achievement_sync"):
             raise SheetsError("unsupported_action")
+        response_limit = 262144 if action == "achievement_state" else 32768
         request = urllib.request.Request(self.url,
             data=json.dumps(self.envelope(payload), ensure_ascii=False).encode(),
             headers={"Content-Type": "application/json; charset=utf-8"})
         try:
             with self.opener.open(request, timeout=25) as response:
-                raw = response.read(32769)
-            if len(raw) > 32768:
+                raw = response.read(response_limit + 1)
+            if len(raw) > response_limit:
                 raise SheetsError("invalid_response")
             result = json.loads(raw)
         except SheetsError:
@@ -109,8 +114,32 @@ class SheetsBridge:
     def status(self):
         with self.lock:
             fresh = self.checked_at is not None and time.time() - self.checked_at <= 3660
+            achievements_ready = (self.achievements_checked_at is not None
+                                  and time.time() - self.achievements_checked_at <= 180)
             return {"configured": self.configured, "connected": bool(self.connected and fresh),
-                    "write_verified": bool(self.write_verified and fresh), "shop_ready": bool(self.shop_ready and fresh), "checked_at": self.checked_at}
+                    "write_verified": bool(self.write_verified and fresh), "shop_ready": bool(self.shop_ready and fresh),
+                    "checked_at": self.checked_at, "achievements_ready": achievements_ready}
+
+    def achievement_worker(self, stop):
+        if not self.configured:
+            return
+        previous = None
+        while not stop.is_set():
+            try:
+                result = self.call({"action": "achievement_sync"})
+                if not result.get("busy"):
+                    with self.lock:
+                        self.achievements_checked_at = int(time.time())
+                    if previous is not True:
+                        print("Achievements bridge ready", flush=True)
+                    previous = True
+            except SheetsError:
+                with self.lock:
+                    self.achievements_checked_at = None
+                if previous is not False:
+                    print("Achievements sync temporarily unavailable", flush=True)
+                previous = False
+            stop.wait(60)
 
     def worker(self, stop):
         if not self.configured:
