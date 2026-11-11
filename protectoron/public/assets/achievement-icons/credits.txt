@@ -1,0 +1,60 @@
+STARFIELD — значки достижений
+Графика: Game-icons.net, CC BY 3.0 (https://creativecommons.org/licenses/by/3.0/).
+Цвет символов изменён под палитру Starfield, фон сделан прозрачным.
+
+ach-001 — id-card, Delapouite: https://game-icons.net/1x1/delapouite/id-card.html
+ach-002 — family-tree, Delapouite: https://game-icons.net/1x1/delapouite/family-tree.html
+ach-003 — heart-necklace, Delapouite: https://game-icons.net/1x1/delapouite/heart-necklace.html
+ach-004 — secret-book, Delapouite: https://game-icons.net/1x1/delapouite/secret-book.html
+ach-005 — two-shadows, Lorc: https://game-icons.net/1x1/lorc/two-shadows.html
+ach-006 — walkie-talkie, Delapouite: https://game-icons.net/1x1/delapouite/walkie-talkie.html
+ach-007 — three-friends, Delapouite: https://game-icons.net/1x1/delapouite/three-friends.html
+ach-008 — person, Delapouite: https://game-icons.net/1x1/delapouite/person.html
+ach-009 — team-idea, Delapouite: https://game-icons.net/1x1/delapouite/team-idea.html
+ach-010 — entry-door, Delapouite: https://game-icons.net/1x1/delapouite/entry-door.html
+ach-011 — scroll-quill, Delapouite: https://game-icons.net/1x1/delapouite/scroll-quill.html
+ach-012 — bar-stool, Delapouite: https://game-icons.net/1x1/delapouite/bar-stool.html
+ach-013 — treasure-map, Lorc: https://game-icons.net/1x1/lorc/treasure-map.html
+ach-014 — monkey-wrench, Delapouite: https://game-icons.net/1x1/delapouite/monkey-wrench.html
+ach-015 — archive-register, Delapouite: https://game-icons.net/1x1/delapouite/archive-register.html
+ach-016 — radio-tower, Delapouite: https://game-icons.net/1x1/delapouite/radio-tower.html
+ach-017 — door-watcher, Delapouite: https://game-icons.net/1x1/delapouite/door-watcher.html
+ach-018 — bottle-cap, Delapouite: https://game-icons.net/1x1/delapouite/bottle-cap.html
+ach-019 — toolbox, Delapouite: https://game-icons.net/1x1/delapouite/toolbox.html
+ach-020 — shaking-hands, Delapouite: https://game-icons.net/1x1/delapouite/shaking-hands.html
+ach-021 — share, Delapouite: https://game-icons.net/1x1/delapouite/share.html
+ach-022 — boat-engine, Delapouite: https://game-icons.net/1x1/delapouite/boat-engine.html
+ach-023 — notebook, Delapouite: https://game-icons.net/1x1/delapouite/notebook.html
+ach-024 — branch-arrow, Lorc: https://game-icons.net/1x1/lorc/branch-arrow.html
+ach-025 — i-beam, Delapouite: https://game-icons.net/1x1/delapouite/i-beam.html
+ach-026 — hand-grip, Delapouite: https://game-icons.net/1x1/delapouite/hand-grip.html
+ach-027 — magnifying-glass, Lorc: https://game-icons.net/1x1/lorc/magnifying-glass.html
+ach-028 — attached-shield, Delapouite: https://game-icons.net/1x1/delapouite/attached-shield.html
+ach-029 — team-upgrade, Delapouite: https://game-icons.net/1x1/delapouite/team-upgrade.html
+ach-030 — target-dummy, Lorc: https://game-icons.net/1x1/lorc/target-dummy.html
+ach-031 — mechanical-arm, Lorc: https://game-icons.net/1x1/lorc/mechanical-arm.html
+ach-032 — bunk-beds, Delapouite: https://game-icons.net/1x1/delapouite/bunk-beds.html
+ach-033 — full-motorcycle-helmet, Delapouite: https://game-icons.net/1x1/delapouite/full-motorcycle-helmet.html
+ach-034 — hand-bandage, Delapouite: https://game-icons.net/1x1/delapouite/hand-bandage.html
+ach-035 — teacher, Delapouite: https://game-icons.net/1x1/delapouite/teacher.html
+ach-036 — pencil, Delapouite: https://game-icons.net/1x1/delapouite/pencil.html
+ach-037 — open-folder, Delapouite: https://game-icons.net/1x1/delapouite/open-folder.html
+ach-038 — briefcase, Delapouite: https://game-icons.net/1x1/delapouite/briefcase.html
+ach-039 — on-target, Lorc: https://game-icons.net/1x1/lorc/on-target.html
+ach-040 — archive-research, Delapouite: https://game-icons.net/1x1/delapouite/archive-research.html
+ach-041 — files, Delapouite: https://game-icons.net/1x1/delapouite/files.html
+ach-042 — position-marker, Delapouite: https://game-icons.net/1x1/delapouite/position-marker.html
+ach-043 — satellite-communication, Delapouite: https://game-icons.net/1x1/delapouite/satellite-communication.html
+ach-044 — guards, Delapouite: https://game-icons.net/1x1/delapouite/guards.html
+ach-045 — binoculars, Delapouite: https://game-icons.net/1x1/delapouite/binoculars.html
+ach-046 — shield-impact, Delapouite: https://game-icons.net/1x1/delapouite/shield-impact.html
+ach-047 — biohazard, Lorc: https://game-icons.net/1x1/lorc/biohazard.html
+ach-048 — syringe, Lorc: https://game-icons.net/1x1/lorc/syringe.html
+ach-049 — pistol-gun, John Colburn: https://game-icons.net/1x1/john-colburn/pistol-gun.html
+ach-050 — exit-door, Delapouite: https://game-icons.net/1x1/delapouite/exit-door.html
+ach-051 — watch, Delapouite: https://game-icons.net/1x1/delapouite/watch.html
+ach-052 — checked-shield, Lorc: https://game-icons.net/1x1/lorc/checked-shield.html
+ach-053 — envelope, Lorc: https://game-icons.net/1x1/lorc/envelope.html
+ach-054 — ceiling-light, Delapouite: https://game-icons.net/1x1/delapouite/ceiling-light.html
+ach-055 — poker-hand, Lorc: https://game-icons.net/1x1/lorc/poker-hand.html
+ach-056 — public-speaker, Delapouite: https://game-icons.net/1x1/delapouite/public-speaker.html

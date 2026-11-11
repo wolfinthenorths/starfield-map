@@ -292,7 +292,7 @@ function renderAchievements({character,achievements}){
     const card=document.createElement('article');
     card.className='achievement-card';
     const icon=document.createElement('img');
-    icon.src=/^ach-[0-9]{3,}$/.test(item.id)?'/assets/achievements/'+item.id+'.jpg':'/assets/terminal-cut.png';
+    icon.src=/^ach-[0-9]{3,}$/.test(item.id)?'/assets/achievement-icons/'+item.id+'.svg':'/assets/terminal-cut.png';
     icon.addEventListener('error',()=>{icon.src='/assets/terminal-cut.png';},{once:true});
     icon.alt='';
     icon.loading='lazy';
