@@ -85,7 +85,7 @@ function achBank_(book) {
   const sheet = book.getSheetByName('Крышки');
   if (!sheet || sheet.getLastRow() > 1000) throw new Error('achievements_schema');
   const values = sheet.getRange(1,1,sheet.getLastRow(),12).getValues();
-  if (values[0][9] !== 'Итого' || values[0][10] !== 'ID персонажа' || values[0][11] !== 'Ачивки') {
+  if (values[0][9] !== 'Итого' || values[0][10] !== 'ID персонажа' || !['Ачивки','Достижения'].includes(values[0][11])) {
     throw new Error('achievements_schema');
   }
   const formulas = sheet.getRange(2,10,Math.max(1,values.length-1),3).getFormulas();

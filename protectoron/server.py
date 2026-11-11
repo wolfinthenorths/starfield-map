@@ -222,7 +222,7 @@ def home_keyboard():
             [cb("Повысить доступ", "access"), cb("Задать вопрос", "faq")],
             [cb("Мой журнал", "history"), cb('Имя Выжившего', "character")]]
     if APP_URL:
-        rows.append([app_button('Перки Выжившего', "?view=perks"), app_button('Мои ачивки', "?view=achievements")])
+        rows.append([app_button('Перки Выжившего', "?view=perks"), app_button('Мои достижения', "?view=achievements")])
         rows.append([app_button()])
     return keyboard(rows)
 
@@ -548,8 +548,8 @@ def handle_update(update):
         return
     if command in ("/perks", "/achievements"):
         if command == "/achievements":
-            message = "«Откройте личный журнал, чтобы посмотреть Ваши ачивки»."
-            button = app_button("Мои ачивки", "?view=achievements")
+            message = "«Откройте личный журнал, чтобы посмотреть Ваши достижения»."
+            button = app_button("Мои достижения", "?view=achievements")
         else:
             message = "«Откройте модуль развития, чтобы проверить Ваш уровень, доступные очки навыков и полученные перки; покупка и бесплатный выбор за уровень оформляются отдельно»."
             button = app_button("Перки Выжившего", "?view=perks")
@@ -795,7 +795,7 @@ def setup_bot():
                 {"command": "mysterium", "description": 'Получить «Мистериум»'},
                 {"command": "access", "description": "Запросить повышение доступа"},
                 {"command": "perks", "description": "Перки, уровень и очки навыков"},
-                {"command": "achievements", "description": "Мои ачивки"},
+                {"command": "achievements", "description": "Мои достижения"},
                 {"command": "help", "description": "Справочный модуль"},
                 {"command": "history", "description": "Журнал обращений"}]})
             telegram("setMyDescription", {"description": 'Робот-контроллер приветствует Вас, Выживший! Выдача «Мистериума», запросы на повышение доступа, справочный модуль — я помогу со всем!'})
@@ -899,9 +899,9 @@ class Handler(BaseHTTPRequestHandler):
                     result = SHEETS.call({"action": "achievement_state", "telegram_id": str(user["id"])})
                 except SheetsError as error:
                     if str(error) == "achievements_identity":
-                        self.reply(409, {"error": "Попросите Смотрителя проверить привязку персонажа к Вашему Telegram."})
+                        self.reply(409, {"error": "Запись в реестре Убежища требует проверки Смотрителя."})
                     else:
-                        self.reply(503, {"error": "Мои ачивки временно недоступны. Попробуйте обновить список."})
+                        self.reply(503, {"error": "Сбой связи с архивом Убежища. Повторите запрос."})
                     return
                 self.reply(200, {"character": result["character"], "achievements": result["achievements"]})
                 return

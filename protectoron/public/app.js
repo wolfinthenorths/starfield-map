@@ -287,7 +287,7 @@ function renderAchievements({character,achievements}){
   name.hidden=!character;
   list.replaceChildren();
   status.hidden=achievements.length>0;
-  status.textContent=character?'У Вашего персонажа пока нет ачивок.':'Попросите Смотрителя привязать персонажа к Вашему аккаунту Telegram.';
+  status.textContent=character?'В Вашем личном журнале пока нет достижений.':'Личный журнал не найден в реестре Убежища.';
   for(const item of achievements){
     const card=document.createElement('article');
     card.className='achievement-card';
@@ -323,7 +323,7 @@ async function loadAchievements(){
   refresh.disabled=true;
   status.hidden=false;
   if(!real){
-    status.textContent='Откройте робота из личного чата в Telegram, чтобы увидеть свои ачивки.';
+    status.textContent='Личный журнал открывается через терминал Протектрона.';
     return;
   }
   achievementLoading=true;
@@ -332,7 +332,7 @@ async function loadAchievements(){
     renderAchievements(await api('achievements'));
   }catch(error){
     status.hidden=false;
-    status.textContent=error.message;
+    status.textContent=error.definitive ? error.message : 'Сбой связи с архивом Убежища. Повторите запрос.';
   }finally{
     achievementLoading=false;
     refresh.disabled=false;
