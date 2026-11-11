@@ -291,11 +291,6 @@ function renderAchievements({character,achievements}){
   for(const item of achievements){
     const card=document.createElement('article');
     card.className='achievement-card';
-    const icon=document.createElement('img');
-    icon.src=/^ach-[0-9]{3,}$/.test(item.id)?'/assets/achievement-icons/'+item.id+'.svg':'/assets/terminal-cut.png';
-    icon.addEventListener('error',()=>{icon.src='/assets/terminal-cut.png';},{once:true});
-    icon.alt='';
-    icon.loading='lazy';
     const body=document.createElement('div'),title=document.createElement('h2'),description=document.createElement('p');
     title.textContent=item.name;
     description.textContent=item.description;
@@ -312,7 +307,7 @@ function renderAchievements({character,achievements}){
       meta.append(chapter);
     }
     body.append(title,description,meta);
-    card.append(icon,body);
+    card.append(body);
     list.append(card);
   }
 }

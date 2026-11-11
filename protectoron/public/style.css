@@ -9,13 +9,11 @@
 .tabs{display:flex;overflow-x:auto;scrollbar-width:thin}.tabs button{flex:1 0 auto;padding-left:11px;padding-right:11px;white-space:nowrap}
 
 .achievement-list{display:grid;gap:12px}
-.achievement-card{display:grid;grid-template-columns:72px minmax(0,1fr);gap:16px;align-items:start;padding:16px;border:1px solid var(--line);border-radius:3px;background:var(--panel)}
-.achievement-card img{width:72px;height:72px;object-fit:contain;padding:3px;border:1px solid var(--green);background:var(--panel)}
+.achievement-card{padding:16px;border:1px solid var(--line);border-radius:3px;background:var(--panel)}
 .achievement-card h2{margin:0;font-size:16px;line-height:1.4;color:var(--green)}
 .achievement-card p{margin:6px 0 12px;font-size:12px;line-height:1.65;color:var(--ink)}
 .achievement-meta{display:flex;flex-wrap:wrap;column-gap:14px;row-gap:5px;color:var(--muted);font-size:11px;line-height:1.5}
 .achievement-meta strong{color:var(--gold)}
 @media(max-width:420px){
-  .achievement-card{grid-template-columns:56px minmax(0,1fr);gap:12px;padding:13px}
-  .achievement-card img{width:56px;height:56px}
+  .achievement-card{padding:13px}
 }
