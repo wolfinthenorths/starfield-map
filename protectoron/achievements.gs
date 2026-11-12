@@ -35,6 +35,21 @@ function achLedger_(book) {
   return {sheet:ledger.sheet,lastRow:ledger.rows.length+1,entries,bankIds,controllerIds};
 }
 
+function achChapter_(value) {
+  const parts = String(value).trim().match(/^([1-9][0-9]*)(?:[.,]([0-9]+))?$/);
+  if (!parts) return null;
+  const whole = Number(parts[1]);
+  if (!Number.isSafeInteger(whole)) return null;
+  const branch = parts[2] && !/^0+$/.test(parts[2]);
+  return {whole, label:branch ? parts[1]+'.'+parts[2] : whole};
+}
+
+function achDateUtc_(value) {
+  const seconds = value instanceof Date ? value.getTime()/1000
+    : typeof value === 'number' ? (value-25569)*86400-7*3600 : 0;
+  return Number.isFinite(seconds) && seconds > 0 ? Math.round(seconds) : null;
+}
+
 function achState_(telegramId) {
   if (typeof telegramId !== 'string' || !ACH_TG_ID.test(telegramId)) throw new Error('invalid_request');
   const registry = registry_();
@@ -48,9 +63,17 @@ function achState_(telegramId) {
   }
   const achievements = Array.from(achLedger_(registry.book).entries.values())
     .filter(entry => entry.character === id && entry.posted)
-    .sort((a,b) => b.utc-a.utc || b.row-a.row)
-    .map(({item,name,description,chapter,caps,utc}) => ({id:item,name,description,chapter:chapter || null,caps,utc}));
-  return {ok:true,character:String(own[0]).trim(),achievements};
+    .sort((a,b) => b.utc-a.utc || b.row-a.row);
+  const keys = new Set(achievements.map(entry => entry.key));
+  const input = new Map(keys.size ? achSheet_(registry.book,'Ачивки',ACH_INPUT_HEADERS).rows
+    .filter(row => keys.has(row[7])).map(row => [row[7],row]) : []);
+  const cards = achievements.map(({key,item,name,description,chapter,caps,utc}) => {
+    const row = input.get(key);
+    const chosen = row && achChapter_(row[2]);
+    return {id:item,name,description,caps,utc:(row && achDateUtc_(row[6])) || utc,
+      chapter:chosen && chosen.whole === chapter ? chosen.label : chapter || null};
+  });
+  return {ok:true,character:String(own[0]).trim(),achievements:cards};
 }
 
 function achCells_(values) {
@@ -134,7 +157,8 @@ function achSyncLocked_() {
   const catalog = queued.length ? achCatalog_(registry.book) : new Map();
   const requests = [], added = [];
   for (const {values,row} of queued) {
-    const [name,achievement,chapter] = values;
+    const [name,achievement,chapterInput] = values;
+    const chapter = achChapter_(chapterInput)?.whole || '';
     const characters = registry.rows.slice(1).filter(item => item[0] && key_(item[0]) === key_(name));
     const character = characters.length === 1 ? String(characters[0][7]) : '';
     const item = catalog.get(key_(achievement));
@@ -143,8 +167,8 @@ function achSyncLocked_() {
       problem = 'Выберите персонажа';
     } else if (!item) {
       problem = 'Выберите ачивку';
-    } else if ((chapter !== '' || item.scope === 'chapter') && (!Number.isSafeInteger(chapter) || chapter < 1)) {
-      problem = 'Укажите номер целой главы';
+    } else if ((chapterInput !== '' || item.scope === 'chapter') && !chapter) {
+      problem = 'Укажите главу или ветку, например 1 или 1.3';
     }
     const key = item && character ? character+':'+item.id+':'+(item.scope === 'chapter' ? chapter : 0) : '';
     if (!problem && ledger.entries.has(key)) problem = 'Уже выдано';
@@ -171,7 +195,8 @@ function achSyncLocked_() {
     ledger.bankIds.set(character,target.id);
     ledger.controllerIds.set(target.id,character);
     waiting.set(key,row);
-    requests.push(achUpdate_(input.sheet,row,4,[item.caps,true,'Начисляется','',key]));
+    requests.push(achUpdate_(input.sheet,row,4,[item.caps,true,'Начисляется']));
+    requests.push(achUpdate_(input.sheet,row,8,[key]));
   }
   if (added.length) {
     requests.push({appendCells:{sheetId:ledger.sheet.getSheetId(),rows:added,fields:'userEnteredValue'}});
@@ -209,7 +234,10 @@ function achSyncLocked_() {
     if (row && input.sheet.getRange(row,8).getValue() === entry.key) {
       // Sheets stores date/time as days in its local time zone (Tomsk is UTC+7).
       const date = entry.utc/86400+25569+7/24;
-      updates.push(achUpdate_(input.sheet,row,6,['Выдано',date]));
+      updates.push(achUpdate_(input.sheet,row,6,['Выдано']));
+      if (input.sheet.getRange(row,7).getValue() === '') {
+        updates.push(achUpdate_(input.sheet,row,7,[date]));
+      }
     }
     posted++;
   }
