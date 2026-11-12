@@ -155,6 +155,8 @@ def state(con, user_id):
                        "ORDER BY created_at DESC,rowid DESC LIMIT 20", (user_id,)).fetchall()
     own = owned_character(con, profile)
     requests = [dict(row) for row in con.execute("SELECT id,kind,recipient_name,degree,status,created_at FROM requests WHERE user_id=? ORDER BY created_at DESC,rowid DESC LIMIT 20", (user_id,))]
+    if own:
+        profile["character"] = own["name"]
     return {"profile": {k: profile[k] for k in ("name", "character", "degree", "access_level")},
             "own_character": public_character(own) if own else None,
             "characters": [public_character(item) for item in ROSTER.entries.values()],
@@ -176,8 +178,13 @@ def set_setting(con, key, value):
 
 
 def owned_character(con, profile):
-    # Names are trusted role-play identities; Telegram identifies journal actors.
-    return ROSTER.get(profile["character"])
+    # Keep a valid role-play selection and recover missing profiles by Telegram ID.
+    selected = ROSTER.get(profile["character"])
+    if selected:
+        return selected
+    telegram_id = str(profile["user_id"])
+    matches = [entry for entry in ROSTER.entries.values() if entry["telegram_id"] == telegram_id]
+    return matches[0] if len(matches) == 1 else None
 
 
 def require_character(con, user_id):
