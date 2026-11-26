@@ -11,6 +11,14 @@ function arenaBookId_() {
   if (!id || !/^[A-Za-z0-9_-]{20,100}$/.test(id)) throw new Error('not_configured');
   return id;
 }
+function arenaReady_() {
+  try {
+    const roster = SpreadsheetApp.openById(arenaBookId_()).getSheetByName('Трибуты');
+    return Boolean(roster && roster.getRange('A4').getValue() === 'Трибут');
+  } catch (error) {
+    return false;
+  }
+}
 const ARENA_PACK = [
   ['Фляга очищенной воды',1], ['Сухпаёк',2], ['Перевязочный пакет',1], ['Карманный фонарь',1]
 ];
