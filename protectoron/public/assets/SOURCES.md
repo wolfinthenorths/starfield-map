@@ -14,3 +14,9 @@
 Права на графику Fallout принадлежат правообладателям оригинальных игр. Пользовательские материалы переиспользованы для того же фанатского проекта.
 
 The icons in `achievements/` come from the project's achievement catalogue. The artwork is from *Fallout: New Vegas* (Obsidian Entertainment / Bethesda Softworks).
+
+## Голодные игры
+
+Карточки оружия используют оригинальные изображения команды Starfield из каталога «Медиафайлы / Оружие».
+Изображение рюкзака взято из `public/assets/ui/backpack.png` проекта
+[`vfleamarket`](https://github.com/wolfinthenorths/vfleamarket).

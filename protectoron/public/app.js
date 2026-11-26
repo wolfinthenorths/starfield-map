@@ -50,7 +50,7 @@ async function api(path, data={}){
   let response;
   // Sheets requests can include a registry refresh and Google's redirect;
   // acquisition also verifies the ledger before committing the same request ID.
-  const timeout=path==='perks'?90000:path==='perk-acquire'?150000:path==='achievements'?35000:20000;
+  const timeout=path==='perks'?90000:path==='perk-acquire'?150000:path==='achievements'?35000:['arena','arena-confirm'].includes(path)?65000:20000;
   try {response=await fetch(`/api/${path}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({initData,...data}),signal:AbortSignal.timeout(timeout)});}
   catch {throw new Error(path==='perks'?'Не удалось дождаться сведений из реестра системы. Ваши регистрационные данные сохранены; нажмите «Обновить сведения», чтобы повторить проверку.':'Связь с контроллером прервалась; пожалуйста, проверьте соединение и повторите обращение.');}
   const result=await response.json();
@@ -63,6 +63,7 @@ function setTab(name){
   play('click');haptic();clearError();
   if(name==='perks')loadPerks();
   if(name==='achievements')loadAchievements();
+  if(name==='arena')loadArena();
 }
 function sync(data){
   if(data.profile)profile=data.profile;

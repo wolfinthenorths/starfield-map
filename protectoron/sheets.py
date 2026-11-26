@@ -17,7 +17,8 @@ class SheetsError(RuntimeError):
 BUSINESS_ERRORS = {"invalid_balance", "balance_formula", "unknown_perk", "already_owned",
     "id_conflict", "invalid_mode", "not_enough_points", "level_unknown", "no_free_choice",
     "small_only", "invalid_class", "invalid_skills", "invalid_character", "character_not_found",
-    "achievements_schema", "achievements_identity"}
+    "achievements_schema", "achievements_identity", "arena_schema", "arena_identity", "arena_ineligible",
+    "arena_chosen", "arena_roll_changed", "arena_invalid_choice", "arena_inventory_full"}
 
 
 class GoogleRedirect(urllib.request.HTTPRedirectHandler):
@@ -60,7 +61,7 @@ class SheetsBridge:
             raise SheetsError("not_configured")
         action = payload.get("action")
         if action not in ("verify_connection", "balance", "shop_state", "acquire_perk",
-                          "achievement_state", "achievement_sync"):
+                          "achievement_state", "achievement_sync", "arena_state", "arena_confirm"):
             raise SheetsError("unsupported_action")
         response_limit = 262144 if action == "achievement_state" else 32768
         request = urllib.request.Request(self.url,

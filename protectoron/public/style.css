@@ -20,3 +20,17 @@
 @media(max-width:355px){
   .achievement-card--illustrated{grid-template-columns:60px minmax(0,1fr);gap:10px}
 }
+
+.arena-options, .arena-items { display: grid; gap: .65rem; margin-block: .9rem; }
+.arena-options { grid-template-columns: repeat(auto-fit, minmax(min(12rem, 100%), 1fr)); }
+.arena-options button { text-align: left; min-height: 3rem; }
+.arena-options button[aria-pressed="true"] { border-color: #e0b36a; background: #403522; color: #ffe4ab; }
+.arena-item { display: grid; grid-template-columns: 6rem minmax(0, 1fr); gap: .95rem; align-items: center;
+  padding: .8rem; border: 1px solid #55604a; border-radius: .45rem; background: #252d20; }
+.arena-item img { width: 100%; height: 5.4rem; object-fit: contain; }
+.arena-item h2 { font-size: 1rem; line-height: 1.25; margin: 0 0 .35rem; }
+.arena-item p { margin: .22rem 0 0; line-height: 1.4; }
+.arena-damage { color: #e0b36a; }
+@media (max-width: 360px) {
+  .arena-item { grid-template-columns: 4.25rem minmax(0, 1fr); gap: .65rem; }
+}

@@ -6,9 +6,10 @@
   <meta name="theme-color" content="#141914">
   <title>Робот · Протектрон Starfield</title>
   <link rel="icon" href="/assets/mysterium.webp" type="image/webp">
-  <link rel="stylesheet" href="/style.css?v=achievements-5">
+  <link rel="stylesheet" href="/style.css?v=arena-1">
   <script src="/telegram-web-app.js" defer></script>
-  <script src="/app.js?v=achievements-5" defer></script>
+  <script src="/app.js?v=arena-1" defer></script>
+  <script src="/arena.js?v=arena-1" defer></script>
 </head>
 <body>
   <main class="terminal">
@@ -21,6 +22,7 @@
       <button data-tab="dispense" class="active" aria-current="page">Выдача</button>
       <button data-tab="perks">Перки</button>
       <button data-tab="achievements">Достижения</button>
+      <button data-tab="arena">Голодные игры</button>
       <button data-tab="access">Доступ</button>
       <button data-tab="faq">Справочник</button>
       <button data-tab="history">Журнал</button>
@@ -75,6 +77,17 @@
       </div>
       <p id="achievement-status" class="empty-state" role="status" aria-live="polite">Проверяю личный журнал…</p>
       <div id="achievement-list" class="achievement-list"></div>
+    </section>
+
+    <section id="arena" class="view" aria-labelledby="arena-title">
+      <div class="section-heading">
+        <div><h1 id="arena-title">Голодные игры</h1><p id="arena-character" class="section-intro"></p></div>
+        <button id="arena-refresh" type="button" class="text-button">Обновить</button>
+      </div>
+      <p id="arena-status" class="empty-state" role="status" aria-live="polite"></p>
+      <div id="arena-options" class="arena-options" role="group" aria-label="Стартовые комплекты"></div>
+      <div id="arena-items" class="arena-items"></div>
+      <button id="arena-confirm" type="button" class="primary-button" hidden>Подтвердить выбор</button>
     </section>
 
     <section id="access" class="view" aria-labelledby="access-title">

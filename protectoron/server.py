@@ -230,6 +230,7 @@ def home_keyboard():
             [cb("Мой журнал", "history"), cb('Имя Выжившего', "character")]]
     if APP_URL:
         rows.append([app_button('Перки Выжившего', "?view=perks"), app_button('Мои достижения', "?view=achievements")])
+        rows.append([app_button('Голодные игры', '?view=arena')])
         rows.append([app_button()])
     return keyboard(rows)
 
@@ -553,8 +554,11 @@ def handle_update(update):
         return
     if chat.get("type") != "private" or chat.get("id") != user["id"]:
         return
-    if command in ("/perks", "/achievements"):
-        if command == "/achievements":
+    if command in ("/perks", "/achievements", "/arena"):
+        if command == "/arena":
+            message = "«Откройте раздел ивента, чтобы проверить стартовый бросок и выбрать снаряжение»."
+            button = app_button("Голодные игры", "?view=arena")
+        elif command == "/achievements":
             message = "«Откройте личный журнал, чтобы посмотреть Ваши достижения»."
             button = app_button("Мои достижения", "?view=achievements")
         else:
@@ -803,6 +807,7 @@ def setup_bot():
                 {"command": "access", "description": "Запросить повышение доступа"},
                 {"command": "perks", "description": "Перки, уровень и очки навыков"},
                 {"command": "achievements", "description": "Мои достижения"},
+                {"command": "arena", "description": "Стартовое снаряжение для Голодных игр"},
                 {"command": "help", "description": "Справочный модуль"},
                 {"command": "history", "description": "Журнал обращений"}]})
             telegram("setMyDescription", {"description": 'Робот-контроллер приветствует Вас, Выживший! Выдача «Мистериума», запросы на повышение доступа, справочный модуль — я помогу со всем!'})
@@ -893,13 +898,40 @@ class Handler(BaseHTTPRequestHandler):
                 return
             body = json.loads(self.rfile.read(length))
             if path not in ("/api/state", "/api/dispense", "/api/access", "/api/profile", "/api/faq",
-                            "/api/companion", "/api/collect", "/api/perks", "/api/perk-acquire", "/api/achievements"):
+                            "/api/companion", "/api/collect", "/api/perks", "/api/perk-acquire", "/api/achievements",
+                            "/api/arena", "/api/arena-confirm"):
                 self.reply(404, {"error": "Unknown action"})
                 return
             try:
                 user = validate_init_data(str(body.get("initData", "")))
             except (ValueError, KeyError, TypeError):
                 self.reply(401, {"error": "Откройте робота заново из личного чата с ботом."})
+                return
+            if path in ("/api/arena", "/api/arena-confirm"):
+                payload = {"action": "arena_state", "telegram_id": str(user["id"])}
+                if path == "/api/arena-confirm":
+                    choice, roll = body.get("choice"), body.get("roll")
+                    if not isinstance(choice, str) or len(choice) > 24 or type(roll) is not int or not 1 <= roll <= 20:
+                        self.reply(400, {"error": "Выберите комплект заново."})
+                        return
+                    payload.update(action="arena_confirm", choice=choice, roll=roll)
+                try:
+                    result = SHEETS.call(payload)
+                except SheetsError as error:
+                    messages = {
+                        "arena_identity": "Стаффу нужно проверить связь Вашего Telegram ID с персонажем в реестре.",
+                        "arena_ineligible": "Для Вашего персонажа выбор снаряжения на арене закрыт.",
+                        "arena_chosen": "Снаряжение уже выбрано. Обновите сведения.",
+                        "arena_roll_changed": "Стартовый D20 изменился или ещё не записан. Обновите сведения.",
+                        "arena_invalid_choice": "Этот комплект недоступен при Вашем броске.",
+                        "arena_inventory_full": "В листе нет места для комплекта. Обратитесь к стаффу.",
+                    }
+                    code = str(error)
+                    self.reply(409 if code in messages else 503, {"error": messages.get(
+                        code, "Таблица ивента временно недоступна. Обновите сведения чуть позже."
+                    )})
+                    return
+                self.reply(200, result)
                 return
             if path == "/api/achievements":
                 try:
