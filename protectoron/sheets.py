@@ -40,6 +40,7 @@ class SheetsBridge:
         self.connected = False
         self.write_verified = False
         self.shop_ready = False
+        self.arena_ready = False
         self.achievements_checked_at = None
         self.opener = urllib.request.build_opener(GoogleRedirect())
 
@@ -92,12 +93,13 @@ class SheetsBridge:
         except SheetsError:
             with self.lock:
                 self.connected = self.write_verified = False
-                self.shop_ready = False
+                self.shop_ready = self.arena_ready = False
                 self.checked_at = int(time.time())
             raise
         with self.lock:
             self.connected = self.write_verified = True
             self.shop_ready = result.get("shop_ready") is True
+            self.arena_ready = result.get("arena_ready") is True
             self.checked_at = int(time.time())
         return result
 
@@ -119,7 +121,8 @@ class SheetsBridge:
                                   and time.time() - self.achievements_checked_at <= 180)
             return {"configured": self.configured, "connected": bool(self.connected and fresh),
                     "write_verified": bool(self.write_verified and fresh), "shop_ready": bool(self.shop_ready and fresh),
-                    "checked_at": self.checked_at, "achievements_ready": achievements_ready}
+                    "checked_at": self.checked_at, "achievements_ready": achievements_ready,
+                    "arena_ready": bool(self.arena_ready and fresh)}
 
     def achievement_worker(self, stop):
         if not self.configured:
