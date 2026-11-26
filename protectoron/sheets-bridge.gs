@@ -35,7 +35,7 @@ function doPost(e) {
     if(!same_(signature,request.signature)) throw new Error('unauthorized');
     const payload=JSON.parse(request.payload);
     if(String(payload.action||'').startsWith('market_')&&typeof marketDispatch_==='function')return json_(marketDispatch_(payload));
-    if(payload.action==='verify_connection') return json_(verifyConnection());
+    if(payload.action==='verify_connection') return json_({...verifyConnection(),arena_ready:typeof arenaReady_==='function' && arenaReady_()});
     if(payload.action==='balance') return json_(balance_(payload.character));
     if(payload.action==='shop_state') return json_(shopState(payload.character));
     if(payload.action==='acquire_perk') return json_(acquirePerk(payload));
