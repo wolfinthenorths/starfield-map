@@ -20,3 +20,5 @@ The icons in `achievements/` come from the project's achievement catalogue. The 
 Карточки оружия используют оригинальные изображения команды Starfield из каталога «Медиафайлы / Оружие».
 Изображение рюкзака взято из `public/assets/ui/backpack.png` проекта
 [`vfleamarket`](https://github.com/wolfinthenorths/vfleamarket).
+
+Карточка «Серпа» использует игровой рендер [The Harvester из Fallout 4](https://www.gamerguides.com/fallout-4/database/weapons/melee/the-harvester).

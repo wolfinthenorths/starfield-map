@@ -17,7 +17,7 @@ function arenaElement(tag, text, className) {
 function arenaCard({id, name, description, damage}) {
   const card = arenaElement('article', null, 'arena-item');
   const img = arenaElement('img');
-  img.src = '/assets/arena/' + id + '.webp';
+  img.src = id === 'sickle' ? '/assets/arena/sickle-handheld.png' : '/assets/arena/' + id + '.webp';
   img.alt = '';
   const content = arenaElement('div');
   content.append(arenaElement('h2', name));

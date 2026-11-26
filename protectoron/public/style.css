@@ -32,3 +32,5 @@
 .arena-item h2 { font-size: 1rem; line-height: 1.25; margin: 0 0 .35rem; }
 .arena-item p { margin: .22rem 0 0; line-height: 1.4; }
 .arena-damage { color: #e0b36a; }
+
+.arena-item img[src$="sickle-handheld.png"] { object-fit: cover; }
